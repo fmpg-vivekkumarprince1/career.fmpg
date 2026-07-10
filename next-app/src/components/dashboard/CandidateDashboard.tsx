@@ -33,30 +33,6 @@ export default function CandidateDashboard({ applications, user }: { application
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col gap-8 mt-24 text-left">
       
-      {/* 1. Header Profile Banner */}
-      <div className="p-8 rounded-3xl bg-gradient-to-br from-emerald-50 via-emerald-100/30 to-white text-slate-900 shadow-sm relative overflow-hidden border border-emerald-500/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="flex items-center gap-4.5 z-10">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-heading text-3xl font-black border border-primary/20">
-            {user.name.charAt(0)}
-          </div>
-          <div>
-            <h1 className="font-heading text-2xl font-black tracking-tight text-slate-900">Welcome back, {user.name}</h1>
-            <p className="text-xs text-slate-500 font-semibold mt-0.5">{user.email} · Account Verified</p>
-          </div>
-        </div>
-
-        <div className="flex gap-3 z-10 shrink-0">
-          <Button
-            asChild
-            variant="outline"
-            className="border-emerald-600/20 hover:border-emerald-600/30 bg-emerald-50/50 hover:bg-emerald-50 hover:text-emerald-700"
-          >
-            <Link href="/jobs">Browse Jobs</Link>
-          </Button>
-        </div>
-      </div>
 
       {/* 2. Main Applications Grid */}
       <div className="flex flex-col gap-6">

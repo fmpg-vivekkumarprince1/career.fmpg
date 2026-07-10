@@ -370,9 +370,11 @@ export default function AdminDashboard({
       {/* Sidebar navigation */}
       <aside className="w-64 bg-card border-r border-border/40 flex flex-col p-6 gap-6 glass-panel select-none shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-slate-900 shadow-md shadow-primary/20">
-            <span className="font-heading text-lg font-black">FM</span>
-          </div>
+          <img 
+            src="/fmpg-logo.png" 
+            alt="FMPG Logo" 
+            className="h-9 w-auto shrink-0"
+          />
           <span className="font-heading text-xl font-black tracking-widest text-foreground uppercase">
             FM<span className="text-primary">PG</span> Admin
           </span>

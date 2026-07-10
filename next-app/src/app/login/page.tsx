@@ -75,9 +75,11 @@ function LoginContent() {
       {/* Brand logo header */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 text-center mb-6">
         <Link href="/" className="inline-flex items-center gap-2.5 group">
-          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/20">
-            <span className="font-heading text-xl font-black">FM</span>
-          </div>
+          <img 
+            src="/fmpg-logo.png" 
+            alt="FMPG Logo" 
+            className="h-10 w-auto shrink-0 group-hover:scale-105 transition-transform duration-300"
+          />
           <span className="font-heading text-2xl font-black tracking-widest text-foreground uppercase">
             FM<span className="text-primary">PG</span>
           </span>
@@ -144,9 +146,11 @@ export default function LoginPage() {
       <div className="min-h-screen bg-muted/20 flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-grid-pattern relative">
         <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 text-center mb-6">
           <div className="inline-flex items-center gap-2.5">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white">
-              <span className="font-heading text-xl font-black">FM</span>
-            </div>
+            <img 
+              src="/fmpg-logo.png" 
+              alt="FMPG Logo" 
+              className="h-10 w-auto shrink-0"
+            />
             <span className="font-heading text-2xl font-black tracking-widest text-foreground uppercase">
               FM<span className="text-primary">PG</span>
             </span>

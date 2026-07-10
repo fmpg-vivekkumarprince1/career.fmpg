@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
@@ -30,6 +30,10 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userBtnRef = useRef<HTMLButtonElement>(null);
   
   const pathname = usePathname();
   const router = useRouter();
@@ -94,9 +98,27 @@ export default function Navbar() {
   const hasDashboardAccess = isAdmin || (isHR && user.permissions?.canAccessDashboard);
   const showAdminConsole = hasDashboardAccess || isAdmin || isHR || (isEmployee && user.permissions?.canManageRecommendations);
 
+  // Handle click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        userMenuOpen &&
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node) &&
+        userBtnRef.current &&
+        !userBtnRef.current.contains(event.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [userMenuOpen]);
+
   // Close dropdowns on route change
   useEffect(() => {
     setShowAdminDropdown(false);
+    setUserMenuOpen(false);
     setIsOpen(false);
   }, [pathname]);
 
@@ -115,9 +137,11 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo brand */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="h-10 w-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/25 group-hover:scale-105 transition-transform duration-300">
-              <span className="font-heading text-xl font-black">FM</span>
-            </div>
+            <img 
+              src="/fmpg-logo.png" 
+              alt="FMPG Logo" 
+              className="h-10 w-auto shrink-0 group-hover:scale-105 transition-transform duration-300"
+            />
             <span className="font-heading text-2xl font-black tracking-widest text-foreground uppercase">
               FM<span className="text-emerald-600">PG</span>
             </span>
@@ -157,17 +181,6 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Employee Profile Workspace */}
-            {(isEmployee || isAdmin) && (
-              <Link
-                href="/employee/profile"
-                className={`py-1.5 transition-colors duration-300 hover:text-emerald-600 flex items-center gap-1.5 ${
-                  pathname === "/employee/profile" ? "text-emerald-600" : "text-muted-foreground"
-                }`}
-              >
-                <Share2 className="h-3.5 w-3.5" /> Employee Profile
-              </Link>
-            )}
 
             {/* Write Review for Active/Former Employees */}
             {isEmployee && (user.status === "active" || user.status === "former") && (
@@ -302,19 +315,85 @@ export default function Navbar() {
                   )}
                 </Link>
 
-                <Link
-                  href={hasDashboardAccess ? "/admin/dashboard" : "/dashboard"}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/20 hover:border-emerald-500 bg-emerald-500/5 text-emerald-600 text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md shadow-emerald-600/5"
-                >
-                  <User className="h-3.5 w-3.5" /> {user.name.split(" ")[0]}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="h-10 w-10 rounded-xl border border-border/40 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 flex items-center justify-center transition-all duration-300 cursor-pointer"
-                  title="Logout"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
+                <div className="relative">
+                  <button
+                    ref={userBtnRef}
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/20 hover:border-emerald-500 bg-emerald-500/5 text-emerald-600 text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md shadow-emerald-600/5 cursor-pointer"
+                  >
+                    <User className="h-3.5 w-3.5" /> {user.name.split(" ")[0]}
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div
+                      ref={userMenuRef}
+                      className="absolute top-full right-0 mt-2 w-64 bg-card border border-border/40 rounded-2xl p-3 shadow-xl animate-in fade-in slide-in-from-top-2 duration-250 z-50 text-left"
+                    >
+                      {/* User Info Header */}
+                      <div className="px-3 py-2 border-b border-border/40 mb-2">
+                        <p className="font-heading text-sm font-black text-foreground truncate">{user.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                        <span className="inline-block text-[9px] text-emerald-650 bg-emerald-600/10 px-2 py-0.5 rounded-full font-bold uppercase mt-1.5 tracking-wider">
+                          {user.role}
+                        </span>
+                        {user.department && (
+                          <p className="text-[9px] text-blue-500 mt-1 uppercase font-semibold">Dept: {user.department}</p>
+                        )}
+                      </div>
+
+                      {/* Menu Options */}
+                      <div className="flex flex-col gap-1">
+                        {/* Dashboard Link */}
+                        <Link
+                          href={hasDashboardAccess ? "/admin/dashboard" : "/dashboard"}
+                          className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <LayoutDashboard className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>My Dashboard</span>
+                        </Link>
+
+                        {/* Employee Profile inside dropdown for employees/admins */}
+                        {(isEmployee || isAdmin) && (
+                          <Link
+                            href="/employee/profile"
+                            className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/50 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Share2 className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>Employee Profile</span>
+                          </Link>
+                        )}
+
+                        {/* Notifications inside dropdown */}
+                        <Link
+                          href="/notifications"
+                          className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Bell className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>Notifications</span>
+                          </span>
+                          {unreadCount > 0 && (
+                            <span className="h-4.5 w-4.5 bg-amber-500 text-slate-950 font-black text-[9px] rounded-full flex items-center justify-center">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </Link>
+                      </div>
+
+                      <div className="h-[1px] bg-border/40 my-2" />
+
+                      {/* Sign Out Button */}
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-rose-500 hover:bg-rose-500/10 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span>Sign out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="hidden md:flex items-center gap-3">
@@ -406,18 +485,7 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Employee Profile Workspace */}
-            {(isEmployee || isAdmin) && (
-              <Link
-                href="/employee/profile"
-                onClick={() => setIsOpen(false)}
-                className={`px-4 py-2.5 rounded-xl hover:bg-muted/30 flex items-center gap-2 transition-colors ${
-                  pathname === "/employee/profile" ? "bg-emerald-600/10 text-emerald-600 font-bold" : "text-muted-foreground"
-                }`}
-              >
-                <Share2 className="h-4 w-4 text-emerald-600" /> Employee Profile
-              </Link>
-            )}
+
 
             {/* Write Review for Active/Former Employees */}
             {isEmployee && (user.status === "active" || user.status === "former") && (
@@ -527,11 +595,20 @@ export default function Navbar() {
 
             {user ? (
               <>
+                {/* Mobile User details header for premium feel */}
+                <div className="px-4 py-2 border-b border-border/20 mb-2">
+                  <p className="text-sm font-black text-foreground truncate">{user.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                  <span className="inline-block text-[9px] text-emerald-600 bg-emerald-600/10 px-2 py-0.5 rounded-full font-bold uppercase mt-1 tracking-wider">
+                    {user.role}
+                  </span>
+                </div>
+
                 {/* Mobile Notification Bell */}
                 <Link
                   href="/notifications"
                   onClick={() => setIsOpen(false)}
-                  className={`px-4 py-2.5 rounded-xl hover:bg-muted/30 flex items-center justify-between transition-colors mb-2 ${
+                  className={`px-4 py-2.5 rounded-xl hover:bg-muted/30 flex items-center justify-between transition-colors ${
                     pathname === "/notifications" ? "bg-emerald-600/10 text-emerald-600 font-bold" : "text-muted-foreground"
                   }`}
                 >
@@ -548,10 +625,28 @@ export default function Navbar() {
                 <Link
                   href={hasDashboardAccess ? "/admin/dashboard" : "/dashboard"}
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-emerald-500/25 hover:border-emerald-500 bg-emerald-500/5 text-emerald-600 flex items-center justify-center gap-2 font-bold"
+                  className={`px-4 py-2.5 rounded-xl hover:bg-muted/30 flex items-center gap-2 transition-colors ${
+                    pathname === "/dashboard" || pathname === "/admin/dashboard" ? "bg-emerald-600/10 text-emerald-600 font-bold" : "text-muted-foreground"
+                  }`}
                 >
-                  <User className="h-4 w-4" /> My Dashboard
+                  <User className="h-4 w-4 text-emerald-600" /> My Dashboard
                 </Link>
+
+                {/* Employee Profile inside mobile user area if user is employee or admin */}
+                {(isEmployee || isAdmin) && (
+                  <Link
+                    href="/employee/profile"
+                    onClick={() => setIsOpen(false)}
+                    className={`px-4 py-2.5 rounded-xl hover:bg-muted/30 flex items-center gap-2 transition-colors ${
+                      pathname === "/employee/profile" ? "bg-emerald-600/10 text-emerald-600 font-bold" : "text-muted-foreground"
+                    }`}
+                  >
+                    <Share2 className="h-4 w-4 text-emerald-600" /> Employee Profile
+                  </Link>
+                )}
+
+                <div className="h-[1px] bg-border/20 my-2" />
+
                 <button
                   onClick={() => {
                     setIsOpen(false);

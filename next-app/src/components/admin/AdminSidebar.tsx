@@ -142,15 +142,12 @@ export default function AdminSidebar({
           ${collapsed ? "justify-center px-2" : ""}
         `}
       >
-        {/* Shield icon with gradient */}
-        <div className="
-          flex-shrink-0 flex items-center justify-center
-          w-9 h-9 rounded-xl
-          bg-gradient-to-br from-emerald-500 to-emerald-600
-          shadow-lg shadow-emerald-500/20
-        ">
-          <Shield className="w-5 h-5 text-white" />
-        </div>
+        {/* FMPG logo image */}
+        <img 
+          src="/fmpg-logo.png" 
+          alt="FMPG Admin Logo" 
+          className="w-9 h-9 flex-shrink-0 object-contain"
+        />
 
         {!collapsed && (
           <div className="overflow-hidden">

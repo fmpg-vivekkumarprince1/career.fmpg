@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { getPublicJobsAction } from "@/app/actions/jobs";
 import JobsListClient from "@/components/jobs/JobsListClient";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 export const metadata = {
   title: "Career Openings | FMPG",
@@ -23,18 +25,23 @@ export default async function JobsPage({
   const res = await getPublicJobsAction({ search, type, department, location, page, limit: 12, sort });
 
   return (
-    <main className="min-h-screen bg-background pt-24 pb-16">
-      <Suspense fallback={<div className="text-center py-20 text-muted-foreground">Loading openings...</div>}>
-        <JobsListClient
-          initialData={res.success ? (res as any).data : null}
-          initialSearch={search}
-          initialType={type}
-          initialDept={department}
-          initialLoc={location}
-          initialSort={sort}
-          initialPage={page}
-        />
-      </Suspense>
-    </main>
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-grow min-h-screen bg-background pt-24 pb-16">
+        <Suspense fallback={<div className="text-center py-20 text-muted-foreground">Loading openings...</div>}>
+          <JobsListClient
+            initialData={res.success ? (res as any).data : null}
+            initialSearch={search}
+            initialType={type}
+            initialDept={department}
+            initialLoc={location}
+            initialSort={sort}
+            initialPage={page}
+          />
+        </Suspense>
+      </main>
+      <Footer />
+    </div>
   );
 }
+
