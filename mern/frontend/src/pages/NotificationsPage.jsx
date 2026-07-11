@@ -3,6 +3,7 @@ import { notificationService } from '../services/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import Loader from '../components/common/Loader';
 import JobUpdateNotificationCard from '../components/notifications/JobUpdateNotificationCard';
 
 const NotificationsPage = () => {
