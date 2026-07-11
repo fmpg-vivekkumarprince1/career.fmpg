@@ -7,12 +7,12 @@ import './index.css'
 // Create a link element to import the fonts
 const fontLink = document.createElement('link');
 fontLink.rel = 'stylesheet';
-fontLink.href = 'https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600;700&display=swap';
+fontLink.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap';
 document.head.appendChild(fontLink);
 
 // Set font-family variables
-document.documentElement.style.setProperty('--font-body', '"Outfit", sans-serif');
-document.documentElement.style.setProperty('--font-heading', '"Marcellus", serif');
+document.documentElement.style.setProperty('--font-body', '"DM Sans", sans-serif');
+document.documentElement.style.setProperty('--font-heading', '"Outfit", sans-serif');
 
 import { HelmetProvider } from 'react-helmet-async';
 

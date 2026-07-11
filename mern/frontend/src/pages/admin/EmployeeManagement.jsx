@@ -557,29 +557,31 @@ const EmployeeManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black py-8">
-      <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mt-12 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              {/* <h1 className="text-3xl font-bold text-white flex items-center">
-                <FaUsers className="mr-3 text-blue-500" />
-                Employee Management
-              </h1> */}
-              {/* <p className="mt-2 text-gray-300">Manage all users and employees in the system</p> */}
+    <div className="ui-page">
+      <div className="ui-content">
+        <header className="ui-page-header flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <span className="fmpg-kicker">People operations</span>
+            <div className="mt-3 flex items-start gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <FaUsers className="h-5 w-5" />
+              </span>
+              <div>
+                <h1 className="ui-page-title">Employee management</h1>
+                <p className="ui-page-subtitle">Manage staff profiles, employment status, permissions, and contracts.</p>
+              </div>
             </div>
+          </div>
             <div className="flex space-x-4">
               <button
                 onClick={handleCSVExport}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
+                className="fmpg-secondary-button inline-flex items-center space-x-2 px-4 py-2.5 transition-colors"
               >
                 <FaDownload />
                 <span>Export CSV</span>
               </button>
             </div>
-          </div>
-        </div>
+        </header>
 
         {/* Employee Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

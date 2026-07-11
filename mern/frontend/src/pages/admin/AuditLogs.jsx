@@ -67,25 +67,26 @@ const AuditLogs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 text-left">
+    <div className="ui-page">
+      <div className="ui-content text-left">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white border-l-4 border-lime-brand pl-4 flex items-center">
-              <ShieldCheck className="mr-3 text-lime-brand" size={32} />
-              System Audit Logs
+            <span className="fmpg-kicker">Governance</span>
+            <h1 className="ui-page-title mt-3 flex items-center">
+              <ShieldCheck className="mr-3 text-emerald-600" size={32} />
+              System audit logs
             </h1>
-            <p className="text-gray-400 mt-2 ml-4">
+            <p className="ui-page-subtitle">
               Track and monitor all administrative actions across the system.
             </p>
           </div>
           
           {/* Filters */}
-          <div className="flex bg-gray-900 p-3 rounded-lg shadow-sm border border-gray-700 gap-3 ml-4 md:ml-0 self-start md:self-auto">
+          <div className="ui-card flex flex-wrap gap-3 p-3 self-start md:self-auto">
             <select 
               value={entityFilter}
               onChange={(e) => setEntityFilter(e.target.value)}
-              className="text-sm border-gray-600 rounded-md focus:border-lime-brand focus:ring-lime-brand py-2 px-3 text-white bg-gray-800 outline-none"
+              className="ui-select text-sm py-2 px-3"
             >
               <option value="">All Entities</option>
               <option value="Certificate">Certificate</option>
@@ -99,7 +100,7 @@ const AuditLogs = () => {
             <select 
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
-              className="text-sm border-gray-600 rounded-md focus:border-lime-brand focus:ring-lime-brand py-2 px-3 text-white bg-gray-800 outline-none"
+              className="ui-select text-sm py-2 px-3"
             >
               <option value="">All Actions</option>
               <option value="CREATE">CREATE</option>
@@ -125,16 +126,16 @@ const AuditLogs = () => {
             <Loader />
           </div>
         ) : (
-          <div className="bg-gray-900 rounded-xl shadow-md border border-gray-700 overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="ui-card overflow-hidden">
+            <div className="ui-table-shell border-0 rounded-none">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-800 border-b border-gray-700 text-xs uppercase tracking-wider text-gray-400">
-                    <th className="p-4 font-semibold">Date & Time</th>
-                    <th className="p-4 font-semibold">User</th>
-                    <th className="p-4 font-semibold">Action</th>
-                    <th className="p-4 font-semibold">Module</th>
-                    <th className="p-4 font-semibold">Details</th>
+                  <tr>
+                    <th scope="col">Date & time</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Module</th>
+                    <th scope="col">Details</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800">
@@ -143,10 +144,10 @@ const AuditLogs = () => {
                       try {
                         const { date, time } = formatDate(log?.createdAt);
                         return (
-                          <tr key={log?._id || index} className="hover:bg-gray-800/50 transition-colors">
+                          <tr key={log?._id || index} className="transition-colors">
                             <td className="p-4 whitespace-nowrap">
                               <div className="flex flex-col text-sm">
-                                <span className="font-medium text-white flex items-center">
+                                <span className="font-medium text-slate-900 flex items-center">
                                   <Calendar size={14} className="mr-1 text-gray-400" /> {date}
                                 </span>
                                 <span className="text-gray-400 flex items-center mt-1">
@@ -160,7 +161,7 @@ const AuditLogs = () => {
                                   {typeof log?.actor?.name === 'string' ? log.actor.name.charAt(0) : <User size={16} />}
                                 </div>
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-medium text-white">
+                                  <span className="text-sm font-medium text-slate-900">
                                     {String(log?.actor?.name || log?.actor || 'Unknown User')}
                                   </span>
                                   <span className="text-xs text-gray-400 capitalize flex items-center">

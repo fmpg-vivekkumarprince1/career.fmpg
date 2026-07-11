@@ -57,6 +57,30 @@ const auth = async (req, res, next) => {
     }
 };
 
+// Attach the authenticated user when a valid token is present, while keeping
+// public read endpoints accessible to anonymous visitors.
+const optionalAuth = async (req, res, next) => {
+    const authHeader = req.header("Authorization");
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) return next();
+
+    try {
+        const decoded = jwt.verify(token, authConfig.jwtSecret);
+        const user = await User.findById(decoded.userId);
+        if (user) {
+            req.user = {
+                ...user.toObject(),
+                userId: user._id.toString()
+            };
+        }
+    } catch (error) {
+        authLog("OptionalAuth: ignoring invalid token", error.message);
+    }
+
+    next();
+};
+
 const verifyAdmin = async (req, res, next) => {
     authLog("Admin: processing");
     try {
@@ -403,6 +427,7 @@ const checkJobAssignment = async (req, res, next) => {
 
 module.exports = { 
     auth, 
+    optionalAuth,
     verifyAdmin, 
     verifyReviewEligibility, 
     authenticateToken, 

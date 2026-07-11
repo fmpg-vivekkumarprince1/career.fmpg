@@ -5,7 +5,10 @@ const Job = require('../models/job');
 router.get('/sitemap.xml', async (req, res) => {
   try {
     // Fetch all active jobs
-    const jobs = await Job.find({ isActive: true }).select('slug updatedAt createdAt').exec();
+    const jobs = await Job.find({
+      isActive: true,
+      $or: [{ isPublished: true }, { isPublished: { $exists: false } }]
+    }).select('slug updatedAt createdAt').exec();
     
     const baseUrl = 'https://fmpg.vercel.app';
     

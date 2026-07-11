@@ -59,27 +59,27 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      {loading && <Loader fullPage={true} text="Creating account..." />}
-      <div className="max-w-md w-full space-y-8">
+    <div className="ui-page flex items-center justify-center">
+      <div className="ui-card max-w-md w-full space-y-8 p-7 sm:p-10">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-white">Create an account</h2>
-          <p className="mt-2 text-sm text-gray-400">
+          <span className="fmpg-kicker">Join FMPG</span>
+          <h2 className="ui-page-title mt-3">Create an account</h2>
+          <p className="mt-2 text-sm text-slate-500">
             Or{' '}
-            <Link to="/login" className="font-medium text-lime-400 hover:text-lime-300">
+            <Link to="/login" className="font-semibold text-emerald-600 hover:text-emerald-700">
               sign in to your existing account
             </Link>
           </p>
         </div>
 
-        <div className="bg-gray-900 rounded-lg shadow-xl p-8 border border-gray-800">
+        <div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+              <label htmlFor="name" className="ui-label">Full name</label>
               <input
                 type="text"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-white"
+                className="ui-input"
                 id="name"
                 name="name"
                 value={formData.name}
@@ -90,10 +90,10 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+              <label htmlFor="email" className="ui-label">Email address</label>
               <input
                 type="email"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-white"
+                className="ui-input"
                 id="email"
                 name="email"
                 value={formData.email}
@@ -104,10 +104,10 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-300 mb-1">Phone Number</label>
+              <label htmlFor="phoneNumber" className="ui-label">Phone number</label>
               <input
                 type="tel"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-white"
+                className="ui-input"
                 id="phoneNumber"
                 name="phoneNumber"
                 value={formData.phoneNumber}
@@ -118,10 +118,10 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+              <label htmlFor="password" className="ui-label">Password</label>
               <input
                 type="password"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-white"
+                className="ui-input"
                 id="password"
                 name="password"
                 value={formData.password}
@@ -132,10 +132,10 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="ui-label">Confirm password</label>
               <input
                 type="password"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-white"
+                className="ui-input"
                 id="confirmPassword"
                 name="confirmPassword"
                 value={formData.confirmPassword}
@@ -148,14 +148,14 @@ const Register = () => {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-black bg-lime-400 hover:bg-lime-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-400 transition-colors duration-300 disabled:opacity-70"
+                className="fmpg-primary-button w-full flex justify-center items-center py-3 px-4 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={loading}
               >
-                Create Account
+                {loading ? <Loader inline size="sm" text="Creating account…" /> : 'Create account'}
               </button>
             </div>
 
-            <p className="text-center text-xs text-gray-500 mt-4">
+            <p className="text-center text-xs text-slate-500 mt-4 leading-5">
               By registering, you agree to our{' '}
               <a href="https://fmpg.vercel.app/TermsAndConditions" className="text-lime-400 hover:text-lime-300">
                 Terms of Service

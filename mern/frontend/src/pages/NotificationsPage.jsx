@@ -187,19 +187,19 @@ const NotificationsPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 pt-12 max-w-4xl">
+    <div className="ui-page">
+      <div className="mx-auto max-w-4xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        {/* <div>
-          <h1 className="text-3xl font-bold text-white">Notifications</h1>
-          <p className="text-gray-400 mt-2">
-            Stay updated with changes to your job applications
-          </p>
-        </div> */}
+      <div className="ui-page-header flex items-start justify-between gap-4">
+        <div>
+          <span className="fmpg-kicker">Activity centre</span>
+          <h1 className="ui-page-title mt-3">Notifications</h1>
+          <p className="ui-page-subtitle">Stay updated with changes to your applications and account.</p>
+        </div>
         {pagination.unreadCount > 0 && (
           <button
             onClick={handleMarkAllAsRead}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="fmpg-secondary-button px-4 py-2 transition-colors"
           >
             Mark all as read
           </button>
@@ -207,13 +207,13 @@ const NotificationsPage = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex space-x-4 mb-6">
+      <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2">
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded-md transition-colors ${
             filter === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-white text-slate-600 hover:bg-slate-50'
           }`}
         >
           All ({pagination.total})
@@ -222,8 +222,8 @@ const NotificationsPage = () => {
           onClick={() => setFilter('unread')}
           className={`px-4 py-2 rounded-md transition-colors ${
             filter === 'unread'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-white text-slate-600 hover:bg-slate-50'
           }`}
         >
           Unread ({pagination.unreadCount})
@@ -232,8 +232,8 @@ const NotificationsPage = () => {
           onClick={() => setFilter('read')}
           className={`px-4 py-2 rounded-md transition-colors ${
             filter === 'read'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-white text-slate-600 hover:bg-slate-50'
           }`}
         >
           Read
@@ -241,16 +241,16 @@ const NotificationsPage = () => {
       </div>
 
       {/* Notifications List */}
-      {loading ? null : error ? (
+      {loading ? <Loader text="Loading notifications…" /> : error ? (
         <div className="bg-red-900/30 border border-red-500 text-red-400 px-6 py-4 rounded-md">
           {error}
         </div>
       ) : notifications.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-8 text-center">
+        <div className="ui-card ui-empty">
           <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-5 5v-5zM10.07 2.82a3 3 0 014.24 0l1.41 1.41a3 3 0 010 4.24l-7.07 7.07a3 3 0 01-4.24 0L2.82 14.13a3 3 0 010-4.24l7.25-7.07z" />
           </svg>
-          <h3 className="text-lg font-semibold text-white mb-2">No notifications found</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">No notifications found</h3>
           <p className="text-gray-400">
             {filter === 'unread' 
               ? "You're all caught up! No unread notifications."
@@ -288,12 +288,12 @@ const NotificationsPage = () => {
                 // Default notification card for other types
                 <div
                   onClick={() => handleNotificationClick(notification)}
-                  className={`bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-750 transition-colors border-l-4 ${
+                  className={`ui-card p-6 cursor-pointer transition-colors border-l-4 ${
                     !notification.isRead 
                       ? notification.priority === 'high'
-                        ? 'border-l-orange-500 bg-gray-800/80'
-                        : 'border-l-blue-500 bg-gray-800/80'
-                      : 'border-l-gray-600'
+                        ? 'border-l-orange-500'
+                        : 'border-l-emerald-500'
+                      : 'border-l-slate-300'
                   }`}
                 >
                   <div className="flex items-start space-x-4">
@@ -375,6 +375,7 @@ const NotificationsPage = () => {
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 };

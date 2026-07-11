@@ -105,7 +105,8 @@ const jobs = [
         order: 2
       }
     ],
-    isActive: true
+    isActive: true,
+    isPublished: true
   },
   {
     title: 'Backend Developer',
@@ -143,7 +144,8 @@ const jobs = [
         order: 1
       }
     ],
-    isActive: true
+    isActive: true,
+    isPublished: true
   },
   {
     title: 'UI/UX Designer',
@@ -181,7 +183,8 @@ const jobs = [
         order: 1
       }
     ],
-    isActive: true
+    isActive: true,
+    isPublished: true
   },
   {
     title: 'DevOps Engineer',
@@ -204,7 +207,8 @@ const jobs = [
     salary: '₹90,000 - ₹110,000',
     department: 'Operations',
     position: 'DevOps Engineer',
-    isActive: true
+    isActive: true,
+    isPublished: true
   },
   {
     title: 'Data Science Intern',
@@ -243,7 +247,8 @@ const jobs = [
         order: 1
       }
     ],
-    isActive: true
+    isActive: true,
+    isPublished: true
   }
 ];
 

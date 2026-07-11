@@ -6,6 +6,8 @@ import JobQuestionManager from '../components/JobQuestionManager';
 import { getResumeViewUrl } from '../utils/urlUtils';
 import Loader from '../components/common/Loader';
 
+const JOB_TABS = ['details', 'questions', 'applications'];
+
 const JobForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ const JobForm = () => {
     type: 'Full-time',
     department: '',
     position: '',
+    isPublished: false,
     questions: [],
     image: null,
     hrContact: {
@@ -35,10 +38,14 @@ const JobForm = () => {
   
   const [imagePreview, setImagePreview] = useState('');
   
-  const queryParams = new URLSearchParams(location.search);
-  const tabParam = queryParams.get('tab');
-  
-  const [activeTab, setActiveTab] = useState(tabParam === 'applications' && id ? 'applications' : 'details');
+  const getTabFromUrl = () => {
+    const requestedTab = new URLSearchParams(location.search).get('tab');
+    if (!JOB_TABS.includes(requestedTab)) return 'details';
+    if (!id && requestedTab === 'applications') return 'details';
+    return requestedTab;
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabFromUrl);
   const [applications, setApplications] = useState([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -46,17 +53,36 @@ const JobForm = () => {
   useEffect(() => {
     if (id) {
       loadJob();
-      if (activeTab === 'applications') {
-        loadJobApplications();
-      }
+    }
+  }, [id]);
+
+  useEffect(() => {
+    setActiveTab(getTabFromUrl());
+  }, [location.search, id]);
+
+  useEffect(() => {
+    if (id && activeTab === 'applications') {
+      loadJobApplications();
     }
   }, [id, activeTab]);
+
+  const handleTabChange = (tab) => {
+    if (!JOB_TABS.includes(tab) || (!id && tab === 'applications')) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('tab', tab);
+    navigate({ pathname: location.pathname, search: searchParams.toString() });
+  };
 
   const loadJob = async () => {
     try {
       setLoading(true);
       const response = await jobService.getJobById(id);
       const job = response.data;
+
+      if (job.slug && id !== job.slug) {
+        navigate(`/jobs/edit/${job.slug}${location.search}`, { replace: true });
+      }
 
       setFormData({
         title: job.title || '',
@@ -69,6 +95,7 @@ const JobForm = () => {
         type: job.type || 'Full-time',
         department: job.department || '',
         position: job.position || '',
+        isPublished: job.isPublished !== false,
         questions: job.questions || [],
         hrContact: {
           name: job.hrContact?.name || '',
@@ -224,20 +251,23 @@ const JobForm = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-7xl">
-      <h1 className="text-3xl font-bold text-white pt-6 mb-8">
-      {/* {id ? 'Edit Job' : 'Create New Job'} */}
-      </h1>
+    <div className="ui-page">
+      <div className="ui-content">
+      <div className="ui-page-header">
+        <span className="fmpg-kicker">Recruitment workspace</span>
+        <h1 className="ui-page-title mt-3">{id ? 'Manage job' : 'Create a new job'}</h1>
+        <p className="ui-page-subtitle">Configure the role, application questions, and review incoming candidates.</p>
+      </div>
 
-      <div className="mb-8 border-b border-gray-700">
+      <div className="mb-8 overflow-x-auto border-b border-slate-200">
         <div className="flex flex-wrap">
           <ul className="flex gap-1 mb-4">
             <li>
               <button
                 className={`px-6 py-3 rounded-t-lg font-medium transition ${activeTab === 'details' 
-                  ? 'bg-gray-900 text-white border-t border-l border-r border-gray-700' 
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-                onClick={() => setActiveTab('details')}
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                  : 'bg-white text-slate-500 border border-transparent hover:bg-slate-50'}`}
+                onClick={() => handleTabChange('details')}
               >
                 Job Details
               </button>
@@ -245,9 +275,9 @@ const JobForm = () => {
             <li>
               <button
                 className={`px-6 py-3 rounded-t-lg font-medium transition ${activeTab === 'questions' 
-                  ? 'bg-gray-900 text-white border-t border-l border-r border-gray-700' 
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-                onClick={() => setActiveTab('questions')}
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                  : 'bg-white text-slate-500 border border-transparent hover:bg-slate-50'}`}
+                onClick={() => handleTabChange('questions')}
               >
                 Application Questions
               </button>
@@ -256,12 +286,9 @@ const JobForm = () => {
               <li>
                 <button
                   className={`px-6 py-3 rounded-t-lg font-medium transition flex items-center ${activeTab === 'applications' 
-                    ? 'bg-gray-900 text-white border-t border-l border-r border-gray-700' 
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-                  onClick={() => {
-                    setActiveTab('applications');
-                    loadJobApplications();
-                  }}
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                    : 'bg-white text-slate-500 border border-transparent hover:bg-slate-50'}`}
+                  onClick={() => handleTabChange('applications')}
                 >
                   Applications 
                   <span className="ml-2 bg-primary text-black text-xs font-bold px-2.5 py-0.5 rounded-full">
@@ -275,14 +302,39 @@ const JobForm = () => {
       </div>
 
       {activeTab === 'details' && (
-        <div className="bg-gray-900 rounded-lg shadow-lg p-8 border border-gray-800">
+        <div className="ui-card p-6 sm:p-8">
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-slate-900">Publication status</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {formData.isPublished
+                        ? 'Published jobs are visible publicly and accept applications.'
+                        : 'Draft jobs are visible only to authorized staff and cannot accept applications.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.isPublished}
+                    onClick={() => setFormData((prev) => ({ ...prev, isPublished: !prev.isPublished }))}
+                    className={`relative h-8 w-14 shrink-0 rounded-full transition-colors ${formData.isPublished ? 'bg-emerald-600' : 'bg-slate-300'}`}
+                  >
+                    <span className={`absolute left-1 top-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${formData.isPublished ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ${formData.isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {formData.isPublished ? 'Published' : 'Draft'}
+                </span>
+              </div>
+
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">Job Title</label>
+                <label htmlFor="title" className="ui-label">Job title</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white"
+                  className="ui-input"
                   id="title"
                   name="title"
                   value={formData.title}
@@ -293,10 +345,10 @@ const JobForm = () => {
               </div>
 
               <div>
-                <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-1">Company</label>
+                <label htmlFor="company" className="ui-label">Company</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white"
+                  className="ui-input"
                   id="company"
                   name="company"
                   value={formData.company}
@@ -307,10 +359,10 @@ const JobForm = () => {
               </div>
 
               <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-300 mb-1">Location</label>
+                <label htmlFor="location" className="ui-label">Location</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white"
+                  className="ui-input"
                   id="location"
                   name="location"
                   value={formData.location}
@@ -320,9 +372,9 @@ const JobForm = () => {
               </div>
 
               <div>
-                <label htmlFor="type" className="block text-sm font-medium text-gray-300 mb-1">Employment Type</label>
+                <label htmlFor="type" className="ui-label">Employment type</label>
                 <select
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white"
+                  className="ui-select"
                   id="type"
                   name="type"
                   value={formData.type}
@@ -336,10 +388,10 @@ const JobForm = () => {
               </div>
 
               <div>
-                <label htmlFor="salary" className="block text-sm font-medium text-gray-300 mb-1">Salary</label>
+                <label htmlFor="salary" className="ui-label">Salary</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white"
+                  className="ui-input"
                   id="salary"
                   name="salary"
                   value={formData.salary}
@@ -570,7 +622,7 @@ const JobForm = () => {
               <p className="mb-4">After creating the job, you'll be able to define custom questions for applicants.</p>
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onClick={() => setActiveTab('details')}
+                onClick={() => handleTabChange('details')}
               >
                 Go to Job Details
               </button>
@@ -695,6 +747,7 @@ const JobForm = () => {
           )}
         </div>
       )}
+    </div>
     </div>
   );
 };

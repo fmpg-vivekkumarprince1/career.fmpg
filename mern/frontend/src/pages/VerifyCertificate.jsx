@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import VerifyForm from '../components/certificates/VerifyForm'
 
@@ -22,8 +22,15 @@ const VerifyCertificate = () => {
   }, [id, location.hash])
   
   return (
-    <div className='pt-20 md:pt-16 lg:pt-20 px-4 sm:px-6 md:px-12 lg:px-20 xl:px-32 2xl:px-64 max-w-screen-2xl mx-auto'>
-      <VerifyForm certificateId={certificateId} />
+    <div className="ui-page">
+      <div className="mx-auto max-w-3xl">
+        <div className="ui-page-header text-center">
+          <span className="fmpg-kicker">Credential verification</span>
+          <h1 className="ui-page-title mt-3">Verify a certificate</h1>
+          <p className="ui-page-subtitle mx-auto">Confirm that a certificate was issued by FMPG using its unique identifier.</p>
+        </div>
+        <VerifyForm certificateId={certificateId} />
+      </div>
     </div>
   )
 }

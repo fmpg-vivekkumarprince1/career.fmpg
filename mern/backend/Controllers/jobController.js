@@ -6,6 +6,28 @@ const { uploadImage, deleteImage, extractPublicId } = require('../config/cloudin
 const { createJobUpdateNotifications } = require('./notificationController');
 const { logAudit } = require('../services/auditService');
 
+const publicJobFilter = {
+  isActive: true,
+  $or: [
+    { isPublished: true },
+    { isPublished: { $exists: false } }
+  ]
+};
+
+const isAdminUser = (user) => ['admin', 'super-admin'].includes((user?.role || '').toLowerCase());
+
+const canManageJob = (user, job) => {
+  if (isAdminUser(user)) return true;
+  if (user?.permissions?.canManageJobs !== true) return false;
+
+  const isHR = ['hr', 'human resources'].includes((user.department || '').toLowerCase()) ||
+    (user.role || '').toLowerCase() === 'hr';
+  return isHR && Array.isArray(user.assignedJobs) &&
+    user.assignedJobs.some((id) => id.toString() === job._id.toString());
+};
+
+const isPubliclyVisible = (job) => job.isActive && job.isPublished !== false;
+
 const findJobByIdentifier = async (identifier) => {
   if (!identifier) return null;
   if (mongoose.Types.ObjectId.isValid(identifier)) {
@@ -54,7 +76,7 @@ const ensureUniqueJobSlug = async (base, selfId) => {
 exports.createJob = async (req, res) => {
   console.log("Job: new");
   try {
-    const { title, company, description, requirements, responsibilities, position, department, location, type, salary, questions, hrContact } = req.body;
+    const { title, company, description, requirements, responsibilities, position, department, location, type, salary, questions, hrContact, isPublished } = req.body;
     console.log(`Job: ${title}`);
     
     if (!title || !description) {
@@ -107,7 +129,8 @@ exports.createJob = async (req, res) => {
       salary,
       questions: parsedQuestions,
       hrContact: parsedHrContact,
-      postedBy: req.user._id
+      postedBy: req.user._id,
+      isPublished: isPublished === true || isPublished === 'true'
     });
     
     // Handle image upload to Cloudinary
@@ -150,6 +173,11 @@ exports.createJob = async (req, res) => {
     console.log("Saving job");
     const savedJob = await job.save();
     console.log(`Created: ${savedJob._id}`);
+
+    if (!isAdminUser(req.user)) {
+      const User = require("../models/user");
+      await User.findByIdAndUpdate(req.user._id, { $addToSet: { assignedJobs: savedJob._id } });
+    }
     
     // Log the action
     await logAudit({
@@ -176,9 +204,7 @@ exports.getFeaturedJobs = async (req, res) => {
   console.log("Jobs: featured");
   try {
     // Active jobs
-    const featuredJobs = await Job.find({ 
-      isActive: true
-    })
+    const featuredJobs = await Job.find(publicJobFilter)
     .sort({ createdAt: -1 }) // Newest first
     .limit(5) // 5 max
     .lean();
@@ -195,10 +221,12 @@ exports.getFeaturedJobs = async (req, res) => {
 exports.getJobs = async (req, res) => {
   console.log("Jobs: active");
   try {
-    let query = { isActive: true };
+    let query = publicJobFilter;
 
-    // If user is HR, also include their assigned jobs (even if inactive)
-    if (req.user && (req.user.role === 'hr' || req.user.department === 'HR')) {
+    if (isAdminUser(req.user)) {
+      query = {};
+    } else if (req.user?.permissions?.canManageJobs === true &&
+      ['hr', 'human resources'].includes((req.user.department || '').toLowerCase())) {
       const assignedJobIds = Array.isArray(req.user.assignedJobs) 
         ? req.user.assignedJobs.map(id => id.toString()) 
         : [];
@@ -206,7 +234,7 @@ exports.getJobs = async (req, res) => {
       if (assignedJobIds.length > 0) {
         query = {
           $or: [
-            { isActive: true },
+            publicJobFilter,
             { _id: { $in: assignedJobIds } }
           ]
         };
@@ -221,7 +249,7 @@ exports.getJobs = async (req, res) => {
       const applicationMap = new Map(applications.map(app => [app.jobId.toString(), app.status]));
 
       const jobsWithStatus = jobs.map(job => ({
-        ...job.toObject(),
+        ...job,
         applicationStatus: applicationMap.get(job._id.toString())
       }));
 
@@ -245,6 +273,9 @@ exports.getJobById = async (req, res) => {
     if (!job) {
       console.log(`Not found: ${req.params.id}`);
       return res.status(404).json({ message: "Job not found" });
+    }
+    if (!isPubliclyVisible(job) && !canManageJob(req.user, job)) {
+      return res.status(403).json({ message: "Access denied. This job is not published." });
     }
     console.log(`Found: ${job.title}`);
     res.status(200).json(job);
@@ -297,6 +328,10 @@ exports.updateJob = async (req, res) => {
       } catch (err) {
         console.error("Parse hrContact err:", err);
       }
+    }
+
+    if (typeof updates.isPublished === 'string') {
+      updates.isPublished = updates.isPublished === 'true';
     }
 
     if (typeof updates.title === 'string' && updates.title.trim()) {
@@ -473,11 +508,15 @@ exports.searchJobs = async (req, res) => {
     console.log(`Query: "${query}"`);
     
     const jobs = await Job.find({
-      isActive: true,
-      $or: [
-        { title: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } },
-        { location: { $regex: query, $options: 'i' } }
+      $and: [
+        publicJobFilter,
+        {
+          $or: [
+            { title: { $regex: query, $options: 'i' } },
+            { description: { $regex: query, $options: 'i' } },
+            { location: { $regex: query, $options: 'i' } }
+          ]
+        }
       ]
     }).sort({ createdAt: -1 }).lean();
     
@@ -494,7 +533,7 @@ exports.filterJobs = async (req, res) => {
   console.log("Filter jobs");
   try {
     const { location, type, minSalary, maxSalary } = req.query;
-    const filter = { isActive: true };
+    const filter = { ...publicJobFilter };
     
     if (location) {
       filter.location = { $regex: location, $options: 'i' };
@@ -538,7 +577,7 @@ exports.sortJobs = async (req, res) => {
     
     console.log(`Sort: ${Object.keys(sortCriteria)[0]}, ${sortOrder === 1 ? 'asc' : 'desc'}`);
     
-    const jobs = await Job.find({ isActive: true }).sort(sortCriteria).lean();
+    const jobs = await Job.find(publicJobFilter).sort(sortCriteria).lean();
     
     console.log(`Sorted: ${jobs.length}`);
     res.status(200).json(jobs);
@@ -583,6 +622,9 @@ exports.addJobQuestion = async (req, res) => {
     if (!job) {
       console.log(`Job not found: ${jobId}`);
       return res.status(404).json({ message: "Job not found" });
+    }
+    if (!isPubliclyVisible(job) && !canManageJob(req.user, job)) {
+      return res.status(403).json({ message: "Access denied. This job is not published." });
     }
     
     // Create question
@@ -756,6 +798,9 @@ exports.getJobQuestions = async (req, res) => {
     if (!job) {
       console.log(`Job not found: ${jobId}`);
       return res.status(404).json({ message: "Job not found" });
+    }
+    if (!isPubliclyVisible(job) && !canManageJob(req.user, job)) {
+      return res.status(403).json({ message: "Access denied. This job is not published." });
     }
     
     // Sort by order

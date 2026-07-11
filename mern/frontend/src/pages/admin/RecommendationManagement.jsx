@@ -126,30 +126,32 @@ const RecommendationManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mt-20 mb-6">
-          <div className="flex justify-between items-center">
-            {/* <div>
-              <h1 className="text-3xl font-bold text-white flex items-center">
-                <FaClipboardList className="mr-3 text-blue-500" />
-                Recommendation Management
-              </h1>
-              <p className="mt-2 text-gray-300">Review and manage employee recommendations</p>
+    <div className="ui-page">
+      <div className="ui-content">
+        <header className="ui-page-header flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <span className="fmpg-kicker">Employee referrals</span>
+            <div className="mt-3 flex items-start gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <FaClipboardList className="h-5 w-5" />
+              </span>
+              <div>
+                <h1 className="ui-page-title">Recommendation management</h1>
+                <p className="ui-page-subtitle">Review referrals, connect recommendations to applications, and record outcomes.</p>
+              </div>
             </div>
+          </div>
             <div className="flex space-x-4">
               <button
                 onClick={handleLinkApplications}
                 disabled={linkingApplications}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50"
+                className="fmpg-secondary-button inline-flex items-center space-x-2 px-4 py-2.5 transition-colors disabled:opacity-50"
               >
                 <FaCog />
-                <span>{linkingApplications ? 'Linking...' : 'Link Applications'}</span>
+                <span>{linkingApplications ? 'Linking…' : 'Link applications'}</span>
               </button>
-            </div> */}
-          </div>
-        </div>
+            </div>
+        </header>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

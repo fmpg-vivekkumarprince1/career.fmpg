@@ -124,11 +124,16 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black py-8">
-      <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-12">
+    <div className="ui-page">
+      <div className="ui-content">
+        <div className="ui-page-header">
+          <span className="fmpg-kicker">People</span>
+          <h1 className="ui-page-title mt-3">User management</h1>
+          <p className="ui-page-subtitle">Review registered candidates, application activity, and account details.</p>
+        </div>
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
+          <div className="ui-card p-6">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-blue-100 bg-opacity-20">
                 <FaUsers className="h-6 w-6 text-blue-500" />
@@ -140,7 +145,7 @@ const UserManagement = () => {
             </div>
           </div>
           
-          <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
+          <div className="ui-card p-6">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-green-100 bg-opacity-20">
                 <FaCheck className="h-6 w-6 text-green-500" />
@@ -154,14 +159,14 @@ const UserManagement = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-900 rounded-lg shadow-md p-6 mb-6 border border-gray-700">
+        <div className="ui-card p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by name, email or phone..."
-                className="pl-10 pr-4 h-[42px] w-full bg-gray-800 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+                className="ui-input pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -170,7 +175,7 @@ const UserManagement = () => {
             <div className="relative">
               <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
               <select
-                className="appearance-none pl-10 pr-4 h-[42px] w-full bg-gray-800 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+                className="ui-select appearance-none pl-10 cursor-pointer"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
@@ -187,7 +192,7 @@ const UserManagement = () => {
 
             <button
               onClick={() => { setSearchTerm(''); setFilterStatus(''); setCurrentPage(1); }}
-              className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+              className="fmpg-secondary-button px-4 py-2 transition-colors"
             >
               Clear Filters
             </button>
@@ -195,10 +200,10 @@ const UserManagement = () => {
         </div>
 
         {/* Users Table */}
-        <div className="bg-gray-900 rounded-lg shadow-md overflow-hidden border border-gray-700">
-          <div className="bg-gray-800 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-white">User Directory</h2>
-            <div className="text-sm text-gray-400">Page {currentPage} of {totalPages}</div>
+        <div className="ui-card overflow-hidden">
+          <div className="ui-card-header flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-slate-900">User directory</h2>
+            <div className="text-sm text-slate-500">Page {currentPage} of {totalPages}</div>
           </div>
           
           {loading ? (
@@ -206,26 +211,26 @@ const UserManagement = () => {
           ) : users.length === 0 ? (
             <div className="p-8 text-center text-gray-400">No users found.</div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="ui-table-shell border-0 rounded-none">
               <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-800">
+                <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Contact</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">App Status</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Actions</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col">Application status</th>
+                    <th scope="col" className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {users.map((user) => (
-                    <tr key={user._id} className="hover:bg-gray-800 transition-colors">
+                    <tr key={user._id} className="transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
                             {user.name?.charAt(0).toUpperCase()}
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-white">{user.name}</div>
+                            <div className="text-sm font-medium text-slate-900">{user.name}</div>
                             <div className="text-xs text-gray-400">Joined {new Date(user.createdAt).toLocaleDateString()}</div>
                           </div>
                         </div>

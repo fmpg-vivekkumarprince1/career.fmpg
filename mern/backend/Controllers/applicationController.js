@@ -120,7 +120,7 @@ exports.createApplication = async (req, res) => {
     
     const job = await findJobByIdentifier(jobId);
 
-    if (!job || !job.isActive) {
+    if (!job || !job.isActive || job.isPublished === false) {
       console.log("Inactive job:", jobId);
       return res.status(404).json({ message: "Job not found or no longer active" });
     }
@@ -268,7 +268,7 @@ exports.submitApplication = async (req, res) => {
     }
     
     const job = await findJobByIdentifier(jobId);
-    if (!job || !job.isActive) {
+    if (!job || !job.isActive || job.isPublished === false) {
       console.log("Inactive job:", jobId);
       return res.status(404).json({ message: "Job not found or no longer active" });
     }

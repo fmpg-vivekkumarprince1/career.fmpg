@@ -1,78 +1,40 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-
-const Loader = ({ fullPage = false, inline = false, size = 'lg', text = "" }) => {
-  const containerClasses = fullPage 
-    ? "fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center" 
-    : inline
-      ? "inline-flex flex-col items-center justify-center"
-      : "flex flex-col items-center justify-center p-12 w-full";
-
-  const sizeMap = {
-    sm: {
-      outer: 'w-8 h-8',
-      middle: 'inset-1',
-      inner: 'inset-2.5',
-      dot: 'w-1 h-1',
-      text: 'text-xs mt-2'
-    },
-    md: {
-      outer: 'w-14 h-14',
-      middle: 'inset-1.5',
-      inner: 'inset-4',
-      dot: 'w-1.5 h-1.5',
-      text: 'text-sm mt-3'
-    },
-    lg: {
-      outer: 'w-24 h-24',
-      middle: 'inset-2',
-      inner: 'inset-6',
-      dot: 'w-1.5 h-1.5',
-      text: 'text-base mt-6'
-    }
+const Loader = ({ fullPage = false, inline = false, size = 'md', text = '' }) => {
+  const sizeClasses = {
+    sm: 'h-4 w-4 border-2',
+    md: 'h-7 w-7 border-[3px]',
+    lg: 'h-10 w-10 border-4'
   };
 
-  const selectedSize = sizeMap[size] || sizeMap.lg;
+  const spinner = (
+    <span
+      className={`${sizeClasses[size] || sizeClasses.md} block shrink-0 animate-spin rounded-full border-emerald-100 border-t-emerald-600`}
+      aria-hidden="true"
+    />
+  );
+
+  if (inline) {
+    return (
+      <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-600" role="status" aria-live="polite">
+        {spinner}
+        {text && <span>{text}</span>}
+        {!text && <span className="sr-only">Loading</span>}
+      </span>
+    );
+  }
 
   return (
-    <div className={containerClasses}>
-      <div className="relative">
-        {/* Outer Ring */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className={`${selectedSize.outer} rounded-full border-t-2 border-r-2 border-lime-500/20 border-t-lime-500`}
-        />
-        
-        {/* Middle Ring */}
-        <motion.div
-          animate={{ rotate: -360 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-          className={`absolute ${selectedSize.middle} rounded-full border-b-2 border-l-2 border-lime-400/20 border-b-lime-400`}
-        />
-
-        {/* Inner Pulse */}
-        <motion.div
-          animate={{ scale: [0.8, 1.1, 0.8], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className={`absolute ${selectedSize.inner} rounded-full bg-lime-500/10 blur-sm`}
-        />
-
-        {/* Center Dot */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className={`${selectedSize.dot} bg-lime-500 rounded-full shadow-[0_0_10px_#84cc16]`} />
-        </div>
+    <div
+      className={fullPage
+        ? 'fixed inset-0 z-[1000] flex items-center justify-center bg-white/82 p-6 backdrop-blur-sm'
+        : 'flex min-h-40 w-full items-center justify-center p-8'}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_18px_45px_-28px_rgba(15,23,42,0.4)]">
+        {spinner}
+        <span className="text-sm font-semibold text-slate-700">{text || 'Loading…'}</span>
       </div>
-
-      {text && (
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`${selectedSize.text} font-medium text-lime-400/80 tracking-wide`}
-        >
-          {text}
-        </motion.p>
-      )}
     </div>
   );
 };

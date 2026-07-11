@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
     canGenerateCertificate: { type: Boolean, default: false },
     canGenerateOfferLetter: { type: Boolean, default: false },
     canCreateJob: { type: Boolean, default: false },
+    canManageJobs: { type: Boolean, default: false },
     canViewApplicants: { type: Boolean, default: false },
     canManageReviews: { type: Boolean, default: false },
     canManageEmployees: { type: Boolean, default: false },

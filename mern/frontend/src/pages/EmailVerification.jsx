@@ -86,28 +86,27 @@ const EmailVerification = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      {(loading || resendLoading) && <Loader fullPage={true} text={loading ? "Verifying..." : "Resending code..."} />}
+    <div className="ui-page flex items-center justify-center">
       <div className="max-w-md w-full">
-        <div className="bg-gray-900 rounded-xl shadow-2xl p-8 border border-gray-800">
+        <div className="ui-card p-7 sm:p-9">
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-lime-400 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mx-auto w-16 h-16 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center mb-5">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.945L21 8m-18 0l7.89 4.945L21 8M3 8v10a2 2 0 002 2h14a2 2 0 002-2V8" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-2">Verify Your Email</h2>
-            <p className="text-gray-300 mb-4">
+            <h2 className="ui-page-title mb-2">Verify your email</h2>
+            <p className="text-slate-600 mb-4">
               We've sent a verification code to
             </p>
-            <p className="text-lime-400 font-semibold break-all">
+            <p className="text-emerald-700 font-semibold break-all">
               {email}
             </p>
           </div>
 
           <form onSubmit={handleVerify} className="space-y-6">
             <div>
-              <label htmlFor="otp" className="block text-white font-medium mb-2 text-center">
+              <label htmlFor="otp" className="ui-label text-center">
                 Enter 6-digit verification code
               </label>
               <input
@@ -116,7 +115,7 @@ const EmailVerification = () => {
                 value={otp}
                 onChange={handleChange}
                 maxLength={6}
-                className={`w-full px-4 py-4 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-center text-2xl tracking-[0.5em] font-mono`}
+                className="ui-input py-4 text-center text-2xl tracking-[0.5em] font-mono"
                 placeholder="000000"
                 autoComplete="one-time-code"
               />
@@ -124,14 +123,15 @@ const EmailVerification = () => {
 
             <button
               type="submit"
-              className="w-full bg-lime-400 hover:bg-lime-300 text-black font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105"
+              disabled={loading}
+              className="fmpg-primary-button w-full py-3 px-4 transition disabled:opacity-60"
             >
-              Verify Email
+              {loading ? 'Verifying…' : 'Verify email'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-300 text-sm mb-3">
+            <p className="text-slate-500 text-sm mb-3">
               Didn't receive the code?
             </p>
             <button

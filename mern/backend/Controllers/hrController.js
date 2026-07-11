@@ -132,6 +132,7 @@ exports.revokeHR = async (req, res) => {
       canGenerateCertificate: false,
       canGenerateOfferLetter: false,
       canCreateJob: false,
+      canManageJobs: false,
       canViewApplicants: false,
       canManageReviews: false,
       canManageEmployees: false,

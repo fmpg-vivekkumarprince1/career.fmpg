@@ -53,6 +53,7 @@ const jobSchema = new mongoose.Schema({
   cloudinaryPublicId: { type: String }, // Cloudinary public ID for deletion
   postedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   isActive: { type: Boolean, default: true, index: true },
+  isPublished: { type: Boolean, default: false, index: true },
   hrContact: {
     name: { type: String },
     email: { type: String },
@@ -77,6 +78,7 @@ const jobSchema = new mongoose.Schema({
 
 // Compound index for active jobs sorting by date
 jobSchema.index({ isActive: 1, createdAt: -1 });
+jobSchema.index({ isActive: 1, isPublished: 1, createdAt: -1 });
 // Indexes for filtering
 jobSchema.index({ location: 'text', title: 'text', description: 'text' });
 jobSchema.index({ department: 1 });

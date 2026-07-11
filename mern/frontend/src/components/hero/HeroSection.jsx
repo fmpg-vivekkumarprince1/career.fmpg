@@ -1,100 +1,85 @@
-import React from 'react';
-import { ArrowRight, Eye } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, CheckCircle2, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const CareerBanner = () => {
+const HeroSection = () => {
   const navigate = useNavigate();
 
-  const handleViewOpenings = () => {
-    navigate('/jobs');
-  };
-
   return (
-    <div className="relative min-h-screen bg-cover bg-center bg-no-repeat overflow-hidden" 
-         style={{ backgroundImage: 'url(/images/output.jpg)' }}>
-      
-      {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-40 z-0"></div>
-      
-      {/* Main content container */}
-      <div className="relative z-10 flex items-center lg:items-end justify-center lg:justify-start min-h-screen px-4 sm:px-6 lg:px-8 py-8 lg:pb-32">
-        <div className="max-w-7xl w-full mx-auto">
-          
-          {/* Content positioned responsively */}
-          <div className="text-white max-w-3xl lg:max-w-2xl text-center lg:text-left">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight mb-4 sm:mb-6">
-              Career <span className="text-lime-400 block sm:inline">With FMPG</span>
-            </h1>
-            
-            <p className="text-base sm:text-lg lg:text-xl xl:text-2xl leading-relaxed opacity-90 mb-6 sm:mb-8 max-w-2xl mx-auto lg:mx-0">
-              Join the innovative team at FMPG, where quality living meets professional excellence. 
-              We're building the future of property management and looking for passionate 
-              individuals who share our vision. Be part of a company that values innovation, 
-              collaboration, and professional growth.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 items-center lg:items-start justify-center lg:justify-start">
-              
-              <button 
-                onClick={handleViewOpenings}
-                className="group bg-transparent border-2 border-white hover:bg-white hover:text-gray-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2 w-full sm:w-auto justify-center"
-              >
-                <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-                VIEW OPENINGS
-              </button>
-            </div>
+    <section className="relative overflow-hidden border-b border-slate-100 bg-white pb-20 pt-28 lg:pb-28 lg:pt-36">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(5,150,105,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(5,150,105,0.035)_1px,transparent_1px)] bg-[size:42px_42px]" />
+      <div className="absolute -left-24 top-16 h-80 w-80 rounded-full bg-emerald-100/70 blur-3xl" />
+      <div className="absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-amber-50 blur-3xl" />
+
+      <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-6 lg:grid-cols-12 lg:px-8">
+        <div className="lg:col-span-7">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
+            <BriefcaseBusiness size={15} /> Careers at FMPG
+          </div>
+          <h1 className="mt-7 max-w-3xl font-heading text-5xl font-extrabold leading-[1.06] tracking-[-0.04em] text-slate-950 sm:text-6xl lg:text-7xl">
+            Do work that makes{' '}
+            <span className="relative ml-3 inline-block text-emerald-600">
+              living better.
+              <span className="absolute bottom-1 left-0 -z-10 h-3 w-full rounded-full bg-emerald-100" />
+            </span>
+          </h1>
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
+            Join a thoughtful, ambitious team building simpler property experiences for students,
+            professionals, and communities across India.
+          </p>
+
+          <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+            <button
+              onClick={() => navigate('/jobs')}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3.5 font-bold text-white shadow-[0_16px_30px_-16px_rgba(5,150,105,0.8)] transition hover:-translate-y-0.5 hover:bg-emerald-700"
+            >
+              Explore open roles <ArrowRight size={19} />
+            </button>
+            <a
+              href="#life-at-fmpg"
+              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-7 py-3.5 font-bold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+            >
+              Discover our culture
+            </a>
           </div>
 
-          {/* Animated elements positioned responsively */}
-          <div className="hidden lg:block absolute top-1/4 right-8 xl:right-16">
-            {/* Paper plane animation */}
-            <div className="animate-pulse">
-              <div className="text-4xl xl:text-6xl opacity-80">✈️</div>
-            </div>
+          <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-sm font-semibold text-slate-600">
+            {['Remote-friendly', 'Growth focused', 'People first'].map((item) => (
+              <span key={item} className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-emerald-600" /> {item}
+              </span>
+            ))}
           </div>
+        </div>
 
-          {/* Mobile decorative elements */}
-          <div className="lg:hidden absolute top-8 right-4">
-            <div className="animate-pulse">
-              <div className="text-3xl opacity-60">✈️</div>
+        <div className="relative lg:col-span-5">
+          <div className="relative mx-auto max-w-md">
+            <div className="absolute -inset-5 rotate-3 rounded-[2.25rem] border border-emerald-100 bg-emerald-50" />
+            <div className="relative overflow-hidden rounded-[2rem] border-4 border-white bg-slate-100 shadow-[0_30px_70px_-30px_rgba(15,23,42,0.35)]">
+              <img
+                src="/images/output.jpg"
+                alt="FMPG team collaborating"
+                className="aspect-[4/5] w-full object-cover"
+              />
+              <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950/60 to-transparent" />
+              <div className="absolute bottom-5 left-5 right-5 flex items-center gap-3 rounded-2xl border border-white/30 bg-white/90 p-4 shadow-lg backdrop-blur-md">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <MapPin size={21} />
+                </span>
+                <div>
+                  <p className="font-bold text-slate-900">Work from where you thrive</p>
+                  <p className="text-sm text-slate-500">Remote opportunities across India</p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -right-6 top-10 hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-xl sm:block">
+              <p className="text-2xl font-extrabold text-emerald-600">100%</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Human hiring</p>
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Bottom section with chairs - responsive */}
-      <div className="absolute bottom-0 right-0 z-10">
-        <div className="pb-2 sm:pb-4 md:pb-8">
-          <img 
-            src="/images/chairs.png" 
-            alt="Chair" 
-            className="h-20 sm:h-32 md:h-40 lg:h-52 object-contain transform hover:scale-105 transition-transform duration-300" 
-          />
-        </div>
-      </div>
-      
-      {/* View Current Openings button - now integrated into main CTA on mobile */}
-      
-      {/* Floating elements for extra visual appeal - responsive */}
-      <div className="absolute top-1/4 left-4 sm:left-8 animate-bounce delay-1000">
-        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-400 rounded-full opacity-70"></div>
-      </div>
-      <div className="absolute top-1/3 right-1/4 animate-pulse delay-500">
-        <div className="w-4 h-4 sm:w-6 sm:h-6 bg-blue-400 rounded-full opacity-50"></div>
-      </div>
-      <div className="absolute bottom-1/3 left-1/4 animate-bounce delay-700 hidden sm:block">
-        <div className="w-3 h-3 bg-red-400 rounded-full opacity-60"></div>
-      </div>
-      
-      {/* Additional floating elements for better visual balance */}
-      <div className="absolute top-1/2 left-4 animate-pulse delay-300 hidden lg:block">
-        <div className="w-2 h-2 bg-lime-400 rounded-full opacity-80"></div>
-      </div>
-      <div className="absolute bottom-1/4 right-1/3 animate-bounce delay-1200 hidden lg:block">
-        <div className="w-5 h-5 bg-purple-400 rounded-full opacity-40"></div>
-      </div>
-    </div>
+    </section>
   );
 };
 
-export default CareerBanner;
+export default HeroSection;

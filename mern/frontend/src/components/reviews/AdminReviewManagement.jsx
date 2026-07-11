@@ -175,20 +175,20 @@ const AdminReviewManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black py-8">
-      <div className="max-w-7xl pt-12 mx-auto sm:px-6 lg:px-8">
-        {/* Header */}
-        {/* <div className="mt-12 mb-6">
-          <div className="flex justify-between items-center">
+    <div className="ui-page">
+      <div className="ui-content">
+        <header className="ui-page-header">
+          <span className="fmpg-kicker">Community feedback</span>
+          <div className="mt-3 flex items-start gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+              <FaCommentDots className="h-5 w-5" />
+            </span>
             <div>
-              <h1 className="text-3xl font-bold text-white flex items-center">
-                <FaCommentDots className="mr-3 text-blue-500" />
-                Review Management
-              </h1>
-              <p className="mt-2 text-gray-300">Manage employee and candidate reviews</p>
+              <h1 className="ui-page-title">Review management</h1>
+              <p className="ui-page-subtitle">Moderate employee and candidate reviews before they appear publicly.</p>
             </div>
           </div>
-        </div> */}
+        </header>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

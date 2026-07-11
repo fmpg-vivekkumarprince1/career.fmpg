@@ -86,30 +86,33 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 flex items-center justify-center py-28 px-4 sm:px-6 lg:px-8">
+      <div className="absolute -left-24 top-24 h-80 w-80 rounded-full bg-emerald-100/70 blur-3xl" />
+      <div className="absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-amber-50 blur-3xl" />
       {loading && <Loader fullPage={true} text="Authenticating..." />}
-      <div className="max-w-md w-full space-y-8">
+      <div className="relative max-w-md w-full space-y-8 rounded-[2rem] border border-slate-200 bg-white p-7 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.3)] sm:p-10">
         <div className="text-center">
           {/* <Link to="/" className="inline-block mb-6">
             <img src="/logo.png" alt="FMPG Logo" className="h-16 mx-auto" />
           </Link> */}
-          <h2 className="text-3xl font-extrabold text-white">Sign in to your account</h2>
-          <p className="mt-2 text-sm text-gray-400">
+          <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-emerald-700">Welcome back</span>
+          <h2 className="mt-4 font-heading text-3xl font-extrabold text-slate-950">Sign in to your account</h2>
+          <p className="mt-2 text-sm text-slate-500">
             Or{' '}
-            <Link to="/register" className="font-medium text-lime-400 hover:text-lime-300">
+            <Link to="/register" className="font-semibold text-emerald-600 hover:text-emerald-700">
               create a new account
             </Link>
           </p>
         </div>
 
-        <div className="bg-gray-900 rounded-lg shadow-xl p-8 border border-gray-800">
+        <div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">Email address</label>
               <input
                 type="email"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-white"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-slate-900"
                 id="email"
                 name="email"
                 value={formData.email}
@@ -121,14 +124,14 @@ const Login = () => {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300">Password</label>
-                <Link to="/forgot-password" className="text-xs text-lime-400 hover:text-lime-300">
+                <label htmlFor="password" className="block text-sm font-semibold text-slate-700">Password</label>
+                <Link to="/forgot-password" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700">
                   Forgot your password?
                 </Link>
               </div>
               <input
                 type="password"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-white"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-slate-900"
                 id="password"
                 name="password"
                 value={formData.password}
@@ -141,7 +144,7 @@ const Login = () => {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-black bg-lime-400 hover:bg-lime-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-400 transition-colors duration-300 disabled:opacity-70"
+                className="w-full min-h-12 flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-[0_12px_26px_-14px_rgba(5,150,105,0.8)] text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-300 disabled:opacity-70"
                 disabled={loading}
               >
                 Sign in

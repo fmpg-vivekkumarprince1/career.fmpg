@@ -154,6 +154,7 @@ const seedDatabase = async () => {
         position: pos,
         postedBy: faker.helpers.arrayElement(admins)._id,
         isActive: faker.datatype.boolean(0.8), // 80% active
+        isPublished: true,
         questions: [
           {
             questionText: `Years of experience in ${dept}?`,

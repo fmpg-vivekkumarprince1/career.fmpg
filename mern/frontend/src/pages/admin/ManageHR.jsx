@@ -32,6 +32,7 @@ const ManageHR = () => {
       canGenerateCertificate: false,
       canGenerateOfferLetter: false,
       canCreateJob: false,
+      canManageJobs: false,
       canViewApplicants: false,
       canManageReviews: false,
       canManageEmployees: false,
@@ -85,6 +86,7 @@ const ManageHR = () => {
         canGenerateCertificate: hr.permissions?.canGenerateCertificate || false,
         canGenerateOfferLetter: hr.permissions?.canGenerateOfferLetter || false,
         canCreateJob: hr.permissions?.canCreateJob || false,
+        canManageJobs: hr.permissions?.canManageJobs || false,
         canViewApplicants: hr.permissions?.canViewApplicants || false,
         canManageReviews: hr.permissions?.canManageReviews || false,
         canManageEmployees: hr.permissions?.canManageEmployees || false,
@@ -168,7 +170,7 @@ const ManageHR = () => {
 
   if (!isSuperAdmin) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="ui-page flex items-center justify-center">
         <div className="text-center">
           <FaLock className="mx-auto text-red-500 text-5xl mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
@@ -179,8 +181,8 @@ const ManageHR = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black py-12 px-4 sm:px-6 lg:px-8 text-white">
-      <div className="max-w-7xl mx-auto mt-8">
+    <div className="ui-page">
+      <div className="ui-content">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
             <h1 className="text-3xl font-extrabold flex items-center">
@@ -261,10 +263,15 @@ const ManageHR = () => {
                         label="Offer Letters" 
                         icon={FaFileInvoice} 
                       />
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canCreateJob} 
-                        label="Job Posts" 
-                        icon={FaBriefcase} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canCreateJob}
+                        label="Create Jobs"
+                        icon={FaBriefcase}
+                      />
+                      <PermissionBadge
+                        enabled={hr.permissions?.canManageJobs}
+                        label="Manage Jobs"
+                        icon={FaBriefcase}
                       />
                       <PermissionBadge 
                         enabled={hr.permissions?.canViewApplicants} 
@@ -456,7 +463,8 @@ const ManageHR = () => {
                         {[
                           { id: 'canGenerateCertificate', label: 'Certificate Generation', desc: 'Allows HR to issue and sign certificates.' },
                           { id: 'canGenerateOfferLetter', label: 'Offer Letter Generation', desc: 'Allows HR to generate and extend offer letters.' },
-                          { id: 'canCreateJob', label: 'Job Creation', desc: 'Allows HR to create and manage job postings.' },
+                          { id: 'canCreateJob', label: 'Job Creation', desc: 'Allows HR to create new draft jobs.' },
+                          { id: 'canManageJobs', label: 'Job Management', desc: 'Allows assigned jobs to be viewed, edited, published, or unpublished.' },
                           { id: 'canViewApplicants', label: 'Applicant Insights', desc: 'Allows viewing detailed applicant profiles.' },
                           { id: 'canManageReviews', label: 'Review Moderation', desc: 'Allows approving/rejecting user reviews.' },
                           { id: 'canManageEmployees', label: 'Employee Tracking', desc: 'Full access to employee management dashboard.' },

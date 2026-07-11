@@ -253,7 +253,7 @@ const EmployeeProfile = () => {
   // Check if user has proper permissions (Must have 'employee' role)
   if (currentUser.role !== 'employee') {
     return (
-      <div className="min-h-screen bg-black py-12">
+      <div className="ui-page">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -274,7 +274,7 @@ const EmployeeProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black pt-20">
+    <div className="ui-page">
       {(loading || formLoading || loadingApplication) && (
         <Loader 
           fullPage={true} 

@@ -19,18 +19,18 @@ export default {
         'lime-brand-dark': '#8aab0a',
       },
       backgroundColor: {
-        'dark': '#121212',
-        'card': '#1a1a1a',
-        'input': '#2d2d2d',
+        'dark': '#f8fafc',
+        'card': '#ffffff',
+        'input': '#ffffff',
       },
       textColor: {
-        'primary': '#ffffff',
-        'secondary': '#cccccc',
-        'accent': '#ffd700',
+        'primary': '#0f172a',
+        'secondary': '#64748b',
+        'accent': '#059669',
       },
       borderColor: {
-        'primary': '#2d2d2d',
-        'accent': '#ffd700',
+        'primary': '#e2e8f0',
+        'accent': '#059669',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
@@ -63,9 +63,9 @@ export default {
         },
       },
       boxShadow: {
-        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2)',
-        'glow-lime': '0 0 15px 5px rgba(163, 198, 20, 0.3)',
-        'glow-yellow': '0 0 15px 5px rgba(250, 204, 21, 0.3)',
+        'card': '0 10px 30px -14px rgba(15, 23, 42, 0.16)',
+        'glow-lime': '0 12px 28px -12px rgba(5, 150, 105, 0.35)',
+        'glow-yellow': '0 12px 28px -12px rgba(245, 158, 11, 0.3)',
       },
       transitionProperty: {
         'height': 'height',

@@ -237,7 +237,7 @@ const MyApplications = () => {
 
   if (loading) {
     return (
-      <div className="bg-black min-h-screen py-10 px-4 md:px-8 flex flex-col items-center justify-center">
+      <div className="ui-page flex flex-col items-center justify-center">
         <Loader fullPage={true} text="Loading your applications..." />
       </div>
     );
@@ -245,16 +245,21 @@ const MyApplications = () => {
 
   return (
     <>
-      <div className="bg-black min-h-screen pt-10 pb-10 px-4 md:px-8">
+      <div className="ui-page">
         <div className="max-w-7xl mx-auto">
           {/* <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-yellow to-amber-400 mb-12 text-center">My Applications</h1> */}
 
 
 
-          <div className="w-full pt-12">
-            <div className="bg-gray-950 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.8)] overflow-hidden border border-gray-800">
-              <div className="p-5 bg-gradient-to-r from-gray-900 to-black border-b border-gray-800">
-                <h2 className="text-2xl  font-bold flex items-center">
+          <div className="w-full">
+            <div className="ui-page-header">
+              <span className="fmpg-kicker">Candidate portal</span>
+              <h1 className="ui-page-title mt-3">My applications</h1>
+              <p className="ui-page-subtitle">Track every application and review status updates in one place.</p>
+            </div>
+            <div className="ui-card overflow-hidden">
+              <div className="ui-card-header p-5">
+                <h2 className="text-xl font-bold flex items-center text-slate-900">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
@@ -263,7 +268,7 @@ const MyApplications = () => {
               </div>
 
               <div className="p-5">
-                {downloading && <Loader fullPage={true} text="Downloading..." />}
+                {downloading && <div className="mb-4"><Loader inline size="sm" text="Preparing download…" /></div>}
                 {applications.length === 0 ? (
                   <div className="text-center py-16 px-4">
                     <div className="mb-6 text-gray-400">
@@ -271,9 +276,9 @@ const MyApplications = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <h3 className="text-2xl font-medium text-white mb-3">You haven't applied for any jobs yet.</h3>
+                    <h3 className="text-2xl font-bold text-slate-900 mb-3">No applications yet</h3>
                     <p className="text-gray-400 mb-8 max-w-lg mx-auto">Browse available jobs and submit your first application to kickstart your career journey.</p>
-                    <Link to="/jobs" className="px-8 py-3 bg-black text-white font-medium rounded-md transition-all duration-300 shadow-lg hover:shadow-amber-500/20">
+                    <Link to="/jobs" className="fmpg-primary-button inline-flex px-7 py-3 transition-all">
                       Browse Jobs
                     </Link>
                   </div>
@@ -296,9 +301,9 @@ const MyApplications = () => {
                           />
 
                           <div
-                            className={`rounded-xl cursor-pointer transition-all duration-300 group ${selectedApplication && selectedApplication._id === application._id
-                              ? 'bg-gradient-to-r from-secondary-black to-gray-900 border-l-4 shadow-lg backdrop-blur-sm'
-                              : 'hover:bg-gray-900 hover:bg-opacity-80 hover:shadow-md hover:border-l-4 hover:border-white'
+                            className={`rounded-xl cursor-pointer border transition-all duration-300 group ${selectedApplication && selectedApplication._id === application._id
+                              ? 'border-emerald-300 bg-emerald-50/60 shadow-sm'
+                              : 'border-transparent hover:border-slate-200 hover:bg-slate-50'
                               }`}
                           >
                             <div
@@ -307,7 +312,7 @@ const MyApplications = () => {
                             >
                               <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-3 md:space-y-0">
                                 <div>
-                                  <h3 className="text-xl font-medium mb-2 text-white group-hover:font-extrabold transition-colors duration-300">
+                                  <h3 className="text-xl font-bold mb-2 text-slate-900 transition-colors duration-300">
                                     {(() => {
                                       // Get the job ID, whether it's a string or object with _id
                                       const jobId = (application.jobId && typeof application.jobId === 'object' && application.jobId._id)
@@ -387,7 +392,7 @@ const MyApplications = () => {
                                 <button
                                   className={`px-4 py-2 rounded-md transition-all duration-300 text-sm font-medium flex items-center ${selectedApplication && selectedApplication._id === application._id
                                     ? 'bg-black text-white hover:from-gray-800 hover:to-gray-700 hover:shadow-lg'
-                                    : 'bg-black text-white hover:from-gray-700 hover:to-gray-600 hover:shadow-md'
+                                    : 'fmpg-secondary-button hover:shadow-sm'
                                     }`}
                                   onClick={(e) => {
                                     e.stopPropagation();

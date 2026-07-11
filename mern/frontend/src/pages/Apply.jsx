@@ -470,18 +470,15 @@ const Apply = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white pt-24 pb-20 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
+    <div className="ui-page relative overflow-hidden">
       {/* Background Decorative Elements - Matching Home Page */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-lime-500/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px]" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-100/60 rounded-full blur-[120px]" />
       </div>
       <Helmet>
         <title>{`Apply for ${job.title} at FMPG`}</title>
         <meta name="description" content={`Apply for the ${job.title} position at FMPG. Join our team building the future.`} />
       </Helmet>
-
-      {submitting && <Loader fullPage={true} text="Submitting Application..." />}
 
       <div className="max-w-4xl mx-auto">
         {/* Header Section */}
@@ -489,25 +486,25 @@ const Apply = () => {
           <div className="mb-12">
             <Link 
               to="/jobs" 
-              className="inline-flex items-center text-sm text-gray-400 hover:text-lime-brand transition-colors mb-6 group"
+              className="inline-flex items-center text-sm font-semibold text-slate-500 hover:text-emerald-700 transition-colors mb-6 group"
             >
               <ArrowLeft className="w-4 h-4 mr-2 transform group-hover:-translate-x-1 transition-transform" />
               Back to All Openings
             </Link>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
-                  {job.title.split(' ').map((word, i) => i === job.title.split(' ').length - 1 ? <span key={i} className="text-lime-400">{word}</span> : word + ' ')}
+                <h1 className="ui-page-title mb-6">
+                  {job.title}
                 </h1>
                 <div className="flex flex-wrap items-center gap-4 text-gray-400">
-                  <span className="flex items-center gap-1.5 bg-gray-900 px-4 py-1.5 rounded-full text-sm border border-gray-800">
-                    <MapPin className="w-4 h-4 text-lime-400" /> {job.location || 'Remote'}
+                  <span className="flex items-center gap-1.5 bg-white px-4 py-2 rounded-full text-sm border border-slate-200">
+                    <MapPin className="w-4 h-4 text-emerald-600" /> {job.location || 'Remote'}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-gray-900 px-4 py-1.5 rounded-full text-sm border border-gray-800">
-                    <Briefcase className="w-4 h-4 text-lime-400" /> {job.type || 'Full-time'}
+                  <span className="flex items-center gap-1.5 bg-white px-4 py-2 rounded-full text-sm border border-slate-200">
+                    <Briefcase className="w-4 h-4 text-emerald-600" /> {job.type || 'Full-time'}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-gray-900 px-4 py-1.5 rounded-full text-sm border border-gray-800">
-                    <Sparkles className="w-4 h-4 text-lime-400" /> {job.type === 'Internship' ? 'Stipend' : 'Salary'}: {formatCurrencyValue(job.salary)}
+                  <span className="flex items-center gap-1.5 bg-white px-4 py-2 rounded-full text-sm border border-slate-200">
+                    <Sparkles className="w-4 h-4 text-emerald-600" /> {job.type === 'Internship' ? 'Stipend' : 'Salary'}: {formatCurrencyValue(job.salary)}
                   </span>
                 </div>
               </div>
@@ -518,16 +515,16 @@ const Apply = () => {
         {/* Stepper */}
         <div className="mb-12 relative z-10">
           <div className="flex items-center justify-between relative max-w-2xl mx-auto">
-            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-gray-800 -translate-y-1/2 z-0" />
+            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-slate-200 -translate-y-1/2 z-0" />
             {[1, 2, 3, 4].map((step) => (
               <div key={step} className="relative z-10 flex flex-col items-center">
                 <div 
                   className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
                     currentStep === step 
-                      ? 'bg-lime-400 border-lime-400 text-black shadow-[0_0_20px_rgba(163,198,20,0.3)]' 
+                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' 
                       : currentStep > step 
-                        ? 'bg-gray-900 border-gray-700 text-lime-400' 
-                        : 'bg-black border-gray-800 text-gray-600'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                        : 'bg-white border-slate-200 text-slate-400'
                   }`}
                 >
                   {currentStep > step ? <Check className="w-6 h-6" /> : <span className="text-sm font-bold">{step}</span>}
@@ -541,7 +538,7 @@ const Apply = () => {
         </div>
 
         {/* Form Card */}
-        <div className="bg-gray-900/60 backdrop-blur-xl border border-gray-800/50 rounded-3xl overflow-hidden shadow-2xl relative z-10">
+        <div className="ui-card overflow-hidden relative z-10">
           <form onSubmit={handleSubmit} className="p-8 md:p-12">
             <AnimatePresence mode="wait">
               {currentStep === 1 && (
@@ -826,6 +823,7 @@ const Apply = () => {
             </div>
           </form>
         </div>
+        {submitting && <div className="mt-5 flex justify-end"><Loader inline size="sm" text="Submitting application…" /></div>}
       </div>
     </div>
   );

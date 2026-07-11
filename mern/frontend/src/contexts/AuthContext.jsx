@@ -51,7 +51,8 @@ export const AuthProvider = ({ children }) => {
       if (user && token && !authService.isTokenExpired()) {
         setCurrentUser(user);
       } else {
-        authService.clearAuthData();
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setCurrentUser(null);
       }
     };

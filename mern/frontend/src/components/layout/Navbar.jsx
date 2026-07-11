@@ -208,24 +208,24 @@ const Navbar = () => {
     <>
       {/* Top navbar with logo and user dropdown */}
       <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ease-in-out ${scrolled
-          ? 'bg-black/80 shadow-lg backdrop-blur-md'
-          : 'bg-transparent'
+        className={`fixed top-0 w-full z-50 border-b transition-all duration-300 ease-in-out ${scrolled
+          ? 'bg-white/95 border-slate-200 shadow-[0_10px_30px_-18px_rgba(15,23,42,0.28)] backdrop-blur-xl'
+          : 'bg-white/90 border-slate-100 backdrop-blur-lg'
           }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             <div className="flex items-center">
               <Link to="/" className="flex items-center">
-                <div className="bg-zinc-900/90 border-l-4 border-lime-400 rounded-r-xl py-1.5 px-3 flex items-center space-x-2 shadow-2xl transition-transform hover:scale-105">
+                <div className="rounded-2xl py-1.5 pr-3 flex items-center space-x-2 transition-transform hover:scale-[1.02]">
                   <img
                     src="/logo.png"
                     alt="FMPG Logo"
                     className="h-10 sm:h-12 w-auto object-contain"
                   />
                   <div className="flex flex-col">
-                    <span className="text-lime-400 text-xs sm:text-sm font-black leading-none uppercase tracking-tight">FMPG</span>
-                    <span className="text-zinc-400 text-[10px] sm:text-xs font-medium leading-tight mt-1 tracking-tight">CAREERS PORTAL</span>
+                    <span className="text-slate-950 text-sm sm:text-base font-extrabold leading-none uppercase tracking-[0.12em]">FM<span className="text-emerald-600">PG</span></span>
+                    <span className="text-slate-500 text-[9px] sm:text-[10px] font-bold leading-tight mt-1 tracking-[0.14em]">CAREERS</span>
                   </div>
                 </div>
               </Link>
@@ -242,7 +242,7 @@ const Navbar = () => {
                         key={item.to}
                         to={item.to}
                         onMouseEnter={() => prefetchPage(item.to)}
-                        className="bg-lime-400 text-black font-semibold px-6 py-2 rounded-full hover:bg-lime-300 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                        className="bg-emerald-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-700 transition-all duration-300 shadow-[0_10px_24px_-12px_rgba(5,150,105,0.7)]"
                       >
                         {item.label}
                       </Link>
@@ -254,8 +254,8 @@ const Navbar = () => {
                       key={item.to}
                       to={item.to}
                       onMouseEnter={() => prefetchPage(item.to)}
-                      className={`${location.pathname === item.to ? 'text-lime-400' : 'text-white hover:text-lime-400'
-                        } font-medium transition-colors duration-300`}
+                      className={`${location.pathname === item.to ? 'text-emerald-700 bg-emerald-50' : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/70'
+                        } font-semibold px-3 py-2 rounded-lg transition-colors duration-300`}
                     >
                       {item.label}
                     </Link>
@@ -268,7 +268,7 @@ const Navbar = () => {
                     <button
                       ref={moreBtnRef}
                       onClick={toggleMoreMenu}
-                      className="flex items-center text-white hover:text-lime-400 font-medium transition-colors duration-300 focus:outline-none"
+                      className="flex items-center text-slate-600 hover:text-emerald-700 font-semibold px-3 py-2 rounded-lg hover:bg-emerald-50 transition-colors duration-300 focus:outline-none"
                     >
                       More
                       <svg className="ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -280,13 +280,13 @@ const Navbar = () => {
                     {moreMenuOpen && (
                       <div
                         ref={moreMenuRef}
-                        className="absolute top-full right-0 mt-2 w-56 rounded-md shadow-lg py-1 bg-gray-900 border border-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
+                        className="absolute top-full right-0 mt-3 w-64 rounded-2xl shadow-xl py-2 bg-white border border-slate-200 ring-1 ring-slate-950/5 focus:outline-none z-10"
                       >
                         {moreItems.map((item) => (
                           <Link
                             key={item.to}
                             to={item.to}
-                            className="block px-4 py-2 text-sm text-white hover:bg-gray-800 hover:text-lime-400 transition-colors duration-150"
+                            className="block mx-2 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
                             onClick={() => setMoreMenuOpen(false)}
                           >
                             {item.label}
@@ -312,13 +312,13 @@ const Navbar = () => {
                       <button
                         ref={userBtnRef}
                         onClick={toggleUserMenu}
-                        className="flex items-center max-w-xs text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-offset-2 focus:ring-offset-gray-800 rounded-full"
+                        className="flex items-center max-w-xs text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 rounded-full"
                         id="user-menu-button"
                         aria-expanded="false"
                         aria-haspopup="true"
                       >
                         <span className="sr-only">Open user menu</span>
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-lime-400 to-amber-700 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm">
                           {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
                         </div>
                         <span className="hidden md:block ml-2 truncate max-w-[150px]">{currentUser.name || currentUser.email}</span>
@@ -332,17 +332,17 @@ const Navbar = () => {
                     {userMenuOpen && (
                       <div
                         ref={userMenuRef}
-                        className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg py-1 bg-gray-900 border border-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-700 focus:outline-none z-10"
+                        className="origin-top-right absolute right-0 mt-3 w-64 rounded-2xl shadow-xl py-2 bg-white border border-slate-200 ring-1 ring-slate-950/5 divide-y divide-slate-100 focus:outline-none z-10"
                         role="menu"
                         aria-orientation="vertical"
                         aria-labelledby="user-menu-button"
                         tabIndex="-1"
                       >
                         <div className="py-1" role="none">
-                          <div className="block px-4 py-2 text-sm text-gray-300 overflow-hidden" role="menuitem">
+                          <div className="block px-4 py-3 text-sm text-slate-700 overflow-hidden" role="menuitem">
                             <p className="font-medium truncate">{currentUser.name || currentUser.email}</p>
-                            <p className="text-gray-400 truncate" title={currentUser.email}>{currentUser.email}</p>
-                            <p className="text-xs text-lime-400 mt-1 uppercase">{currentUser.role}</p>
+                            <p className="text-slate-500 truncate" title={currentUser.email}>{currentUser.email}</p>
+                            <p className="text-xs text-emerald-600 font-bold mt-1 uppercase">{currentUser.role}</p>
                             {currentUser.department && (
                               <p className="text-xs text-blue-400">Dept: {currentUser.department}</p>
                             )}
@@ -376,7 +376,7 @@ const Navbar = () => {
                         <div className="py-1" role="none">
                           <button
                             onClick={handleLogout}
-                            className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors duration-150"
+                            className="block w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors duration-150"
                             role="menuitem"
                           >
                             Sign out
@@ -393,7 +393,7 @@ const Navbar = () => {
       </nav>
 
       {/* Bottom Navigation Bar with Icons - Only for small screens */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-black/80 shadow-lg backdrop-blur-md z-50 border-t border-gray-800">
+      <nav className="md:hidden fixed bottom-0 w-full bg-white/95 shadow-[0_-10px_30px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl z-50 border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-around h-16">
             {visibleItems.map((item) => {
@@ -404,7 +404,7 @@ const Navbar = () => {
                     key={item.to}
                     to={item.to}
                     onMouseEnter={() => prefetchPage(item.to)}
-                    className="flex flex-col items-center justify-center px-3 py-2 bg-lime-400 rounded-lg text-black font-semibold transform hover:scale-105 transition-all duration-300"
+                    className="flex flex-col items-center justify-center px-3 py-2 bg-emerald-600 rounded-xl text-white font-semibold transition-all duration-300"
                   >
                     <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
@@ -419,7 +419,7 @@ const Navbar = () => {
                   key={item.to}
                   to={item.to}
                   onMouseEnter={() => prefetchPage(item.to)}
-                  className={`flex flex-col items-center justify-center px-3 py-2 ${location.pathname === item.to ? 'text-lime-400' : 'text-white'}`}
+                  className={`flex flex-col items-center justify-center min-w-14 px-2 py-2 rounded-xl ${location.pathname === item.to ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'}`}
                 >
                   <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
@@ -434,7 +434,7 @@ const Navbar = () => {
                 <button
                   ref={mobileMoreBtnRef}
                   onClick={toggleMobileMoreMenu}
-                  className="flex flex-col items-center justify-center px-3 py-2 text-white focus:outline-none"
+                  className="flex flex-col items-center justify-center px-3 py-2 text-slate-500 focus:outline-none"
                 >
                   <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -446,13 +446,13 @@ const Navbar = () => {
                 {mobileMoreMenuOpen && (
                   <div
                     ref={mobileMoreMenuRef}
-                    className="absolute bottom-16 right-0 mb-2 w-56 rounded-md shadow-lg py-1 bg-gray-900 border border-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
+                    className="absolute bottom-16 right-0 mb-2 w-64 rounded-2xl shadow-xl py-2 bg-white border border-slate-200 ring-1 ring-slate-950/5 focus:outline-none z-10"
                   >
                     {currentUser && (
-                      <div className="px-4 py-2 border-b border-gray-700 overflow-hidden">
-                        <p className="text-sm font-medium text-white truncate">{currentUser.name || currentUser.email}</p>
-                        <p className="text-xs text-gray-400 truncate" title={currentUser.email}>{currentUser.email}</p>
-                        <p className="text-xs text-lime-400 mt-1">{currentUser.role}</p>
+                      <div className="px-4 py-3 border-b border-slate-100 overflow-hidden">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{currentUser.name || currentUser.email}</p>
+                        <p className="text-xs text-slate-500 truncate" title={currentUser.email}>{currentUser.email}</p>
+                        <p className="text-xs text-emerald-600 font-bold mt-1">{currentUser.role}</p>
                       </div>
                     )}
 
@@ -460,7 +460,7 @@ const Navbar = () => {
                       <Link
                         key={item.to}
                         to={item.to}
-                        className="block px-4 py-2 text-sm text-white hover:bg-gray-800 hover:text-lime-400 transition-colors duration-150"
+                        className="block mx-2 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
                         onClick={() => setMobileMoreMenuOpen(false)}
                       >
                         {item.label}
@@ -469,13 +469,13 @@ const Navbar = () => {
 
                     {/* Logout for authenticated users */}
                     {currentUser && (
-                      <div className="border-t border-gray-700 mt-1">
+                      <div className="border-t border-slate-100 mt-1">
                         <button
                           onClick={() => {
                             handleLogout();
                             setMobileMoreMenuOpen(false);
                           }}
-                          className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors duration-150"
+                          className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
                         >
                           Sign Out
                         </button>

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const jobController = require("../Controllers/jobController");
-const { verifyAdmin, auth, isHR, hasPermission, checkJobAssignment } = require("../middleware/authMiddleware");
+const { auth, optionalAuth, isHR, hasPermission, checkJobAssignment } = require("../middleware/authMiddleware");
 const multer = require("multer");
 const path = require("path");
 const { uploadImage, deleteImage, extractPublicId } = require('../config/cloudinary');
@@ -28,19 +28,19 @@ router.get("/featured", jobController.getFeaturedJobs); // Add this route for fe
 router.get("/search", jobController.searchJobs);
 router.get("/filter", jobController.filterJobs);
 router.get("/sort", jobController.sortJobs);
-router.get("/", jobController.getJobs);
-router.get("/:id", jobController.getJobById);
-router.get("/:jobId/questions", jobController.getJobQuestions);
+router.get("/", optionalAuth, jobController.getJobs);
+router.get("/:id", optionalAuth, jobController.getJobById);
+router.get("/:jobId/questions", optionalAuth, jobController.getJobQuestions);
 
 // Admin/HR routes
-router.post("/", auth, hasPermission('canCreateJob'), jobImageUpload.single('image'), jobController.createJob);
-router.put("/:id", auth, isHR, checkJobAssignment, jobImageUpload.single('image'), jobController.updateJob);
-router.delete("/:id", auth, isHR, checkJobAssignment, jobController.deleteJob);
+router.post("/", auth, hasPermission('canCreateJob'), hasPermission('canManageJobs'), jobImageUpload.single('image'), jobController.createJob);
+router.put("/:id", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobImageUpload.single('image'), jobController.updateJob);
+router.delete("/:id", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobController.deleteJob);
 
 // Admin/HR routes for question management
-router.post("/:jobId/questions", auth, isHR, checkJobAssignment, jobController.addJobQuestion);
-router.put("/:jobId/questions/:questionId", auth, isHR, checkJobAssignment, jobController.updateJobQuestion);
-router.delete("/:jobId/questions/:questionId", auth, isHR, checkJobAssignment, jobController.deleteJobQuestion);
-router.put("/:jobId/questions-reorder", auth, isHR, checkJobAssignment, jobController.reorderJobQuestions);
+router.post("/:jobId/questions", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobController.addJobQuestion);
+router.put("/:jobId/questions/:questionId", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobController.updateJobQuestion);
+router.delete("/:jobId/questions/:questionId", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobController.deleteJobQuestion);
+router.put("/:jobId/questions-reorder", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobController.reorderJobQuestions);
 
 module.exports = router;

@@ -272,10 +272,15 @@ const Certificates = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl md:text-3xl font-bold mb-6 pt-8 text-white">Certification Management</h1>
+    <div className="ui-page">
+      <div className="ui-content">
+      <div className="ui-page-header">
+        <span className="fmpg-kicker">Documents</span>
+        <h1 className="ui-page-title mt-3">Certificate management</h1>
+        <p className="ui-page-subtitle">Issue, verify, and manage candidate credentials and offer letters.</p>
+      </div>
       
-      <div className="mb-6 border-b border-gray-700">
+      <div className="mb-6 overflow-x-auto border-b border-slate-200">
         <ul className="flex flex-wrap -mb-px">
           {['issue', 'offer', 'all', 'alloffers', 'verify'].map((tab) => (
             <li key={tab} className="mr-2">
@@ -283,8 +288,8 @@ const Certificates = () => {
                 onClick={() => setActiveTab(tab)}
                 className={`inline-block py-4 px-4 text-sm font-medium transition-colors ${
                   activeTab === tab
-                    ? 'border-b-2 border-lime-400 text-lime-400'
-                    : 'text-gray-400 hover:text-gray-300 border-b-2 border-transparent'
+                    ? 'border-b-2 border-emerald-600 text-emerald-700'
+                    : 'text-slate-500 hover:text-slate-900 border-b-2 border-transparent'
                 }`}
               >
                 {tab === 'issue' && 'Issue Certificate'}
@@ -298,14 +303,14 @@ const Certificates = () => {
         </ul>
       </div>
 
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 relative min-h-[400px]">
-        {loading && <Loader fullPage={true} text="Processing request..." />}
+      <div className="ui-card p-6 relative min-h-[400px]">
+        {loading && <Loader text="Processing request…" />}
         
         {!loading && activeTab === 'offer' && (
           <div className="absolute top-6 right-6 z-10">
             <button
               onClick={() => setShowBulkOfferModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-purple-500/20 transition-all flex items-center gap-2"
+              className="fmpg-primary-button px-4 py-2 text-xs flex items-center gap-2 transition-all"
             >
               <FaFileAlt className="text-sm" />
               Bulk Issue Offer
@@ -352,6 +357,7 @@ const Certificates = () => {
           setCommonDetails={setBulkOfferCommon}
           onDownloadSample={handleDownloadBulkOfferSample}
         />
+      </div>
       </div>
     </div>
   );

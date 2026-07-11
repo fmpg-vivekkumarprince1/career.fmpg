@@ -134,10 +134,14 @@ const ApplicationsDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 sm:p-6 lg:p-8 text-white">
-      <div className="max-w-7xl mx-auto">
+    <div className="ui-page">
+      <div className="ui-content">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 mb-8">
-          <h2 className="text-3xl font-bold text-white tracking-tight pt-8"></h2>
+          <div>
+            <span className="fmpg-kicker">Recruitment overview</span>
+            <h1 className="ui-page-title mt-3">Dashboard</h1>
+            <p className="ui-page-subtitle">Monitor applications, active roles, offers, and certificates.</p>
+          </div>
         </div>
         
         {error && (

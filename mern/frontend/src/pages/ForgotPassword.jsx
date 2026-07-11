@@ -103,13 +103,13 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      {loading && <Loader fullPage={true} text="Processing..." />}
+    <div className="ui-page flex items-center justify-center">
       <div className="max-w-md w-full">
-        <div className="bg-gray-900 rounded-xl shadow-2xl p-8 border border-gray-800">
+        <div className="ui-card p-7 sm:p-9">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">Reset Password</h2>
-            <p className="text-gray-300">
+            <span className="fmpg-kicker">Account recovery</span>
+            <h2 className="ui-page-title mt-3 mb-2">Reset password</h2>
+            <p className="text-slate-600">
               {step === 1 
                 ? "Enter your email to receive a reset code" 
                 : "Enter the OTP and your new password"
@@ -120,7 +120,7 @@ const ForgotPassword = () => {
           {step === 1 ? (
             <form onSubmit={handleSendOTP} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-white font-medium mb-2">
+                <label htmlFor="email" className="ui-label">
                   Email Address
                 </label>
                 <input
@@ -129,9 +129,7 @@ const ForgotPassword = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 bg-gray-800 border ${
-                    errors.email ? 'border-red-500' : 'border-gray-700'
-                  } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent`}
+                  className={`ui-input ${errors.email ? '!border-rose-500' : ''}`}
                   placeholder="Enter your email"
                 />
                 {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
@@ -140,7 +138,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-lime-400 hover:bg-lime-300 text-black font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="fmpg-primary-button w-full py-3 px-4 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Sending...' : 'Send Reset Code'}
               </button>
@@ -148,7 +146,7 @@ const ForgotPassword = () => {
           ) : (
             <form onSubmit={handleResetPassword} className="space-y-6">
               <div>
-                <label htmlFor="otp" className="block text-white font-medium mb-2">
+                <label htmlFor="otp" className="ui-label">
                   Verification Code
                 </label>
                 <input
@@ -158,16 +156,14 @@ const ForgotPassword = () => {
                   value={formData.otp}
                   onChange={handleChange}
                   maxLength={6}
-                  className={`w-full px-4 py-3 bg-gray-800 border ${
-                    errors.otp ? 'border-red-500' : 'border-gray-700'
-                  } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent text-center text-2xl tracking-widest`}
+                  className={`ui-input text-center text-2xl tracking-widest ${errors.otp ? '!border-rose-500' : ''}`}
                   placeholder="000000"
                 />
                 {errors.otp && <p className="text-red-400 text-sm mt-1">{errors.otp}</p>}
               </div>
 
               <div>
-                <label htmlFor="newPassword" className="block text-white font-medium mb-2">
+                <label htmlFor="newPassword" className="ui-label">
                   New Password
                 </label>
                 <input
@@ -176,16 +172,14 @@ const ForgotPassword = () => {
                   name="newPassword"
                   value={formData.newPassword}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 bg-gray-800 border ${
-                    errors.newPassword ? 'border-red-500' : 'border-gray-700'
-                  } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent`}
+                  className={`ui-input ${errors.newPassword ? '!border-rose-500' : ''}`}
                   placeholder="Enter new password"
                 />
                 {errors.newPassword && <p className="text-red-400 text-sm mt-1">{errors.newPassword}</p>}
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-white font-medium mb-2">
+                <label htmlFor="confirmPassword" className="ui-label">
                   Confirm New Password
                 </label>
                 <input
@@ -194,9 +188,7 @@ const ForgotPassword = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 bg-gray-800 border ${
-                    errors.confirmPassword ? 'border-red-500' : 'border-gray-700'
-                  } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent`}
+                  className={`ui-input ${errors.confirmPassword ? '!border-rose-500' : ''}`}
                   placeholder="Confirm new password"
                 />
                 {errors.confirmPassword && <p className="text-red-400 text-sm mt-1">{errors.confirmPassword}</p>}
@@ -205,7 +197,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-lime-400 hover:bg-lime-300 text-black font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="fmpg-primary-button w-full py-3 px-4 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Resetting...' : 'Reset Password'}
               </button>
@@ -215,7 +207,7 @@ const ForgotPassword = () => {
                   type="button"
                   onClick={handleResendOTP}
                   disabled={loading}
-                  className="text-lime-400 hover:text-lime-300 text-sm underline"
+                  className="text-emerald-600 hover:text-emerald-700 text-sm font-semibold"
                 >
                   Didn't receive the code? Resend
                 </button>
@@ -225,7 +217,7 @@ const ForgotPassword = () => {
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-gray-300 hover:text-white text-sm"
+                  className="text-slate-500 hover:text-slate-900 text-sm"
                 >
                   ← Back to email
                 </button>
@@ -234,7 +226,7 @@ const ForgotPassword = () => {
           )}
 
           <div className="mt-8 text-center">
-            <p className="text-gray-300">
+            <p className="text-slate-600">
               Remember your password?{' '}
               <Link to="/login" className="text-lime-400 hover:text-lime-300 underline">
                 Sign in
