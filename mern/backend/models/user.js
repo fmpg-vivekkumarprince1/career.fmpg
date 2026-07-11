@@ -5,10 +5,10 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phoneNumber: { type: String },
   password: { type: String, required: true, select: false },
-  role: { 
-    type: String, 
-    default: "user", 
-    enum: ["user", "admin", "employee", "super-admin"] 
+  role: {
+    type: String,
+    default: "user",
+    enum: ["user", "admin", "employee", "super-admin"]
   },
   permissions: {
     canGenerateCertificate: { type: Boolean, default: false },
@@ -22,10 +22,10 @@ const userSchema = new mongoose.Schema({
     canAccessDashboard: { type: Boolean, default: false }
   },
   assignedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
-  status: { 
-    type: String, 
-    enum: ["active", "inactive", "former", "suspended"], 
-    default: "active" 
+  status: {
+    type: String,
+    enum: ["active", "inactive", "former", "suspended"],
+    default: "active"
   },
   positionLevel: {
     type: String,
@@ -52,15 +52,15 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  moreInfo: { type: mongoose.Schema.Types.ObjectId, ref: "UserMoreInfo" }, 
-  offerLetter: { type: mongoose.Schema.Types.ObjectId, ref: "OfferLetter" }, 
+  moreInfo: { type: mongoose.Schema.Types.ObjectId, ref: "UserMoreInfo" },
+  offerLetter: { type: mongoose.Schema.Types.ObjectId, ref: "OfferLetter" },
   department: { type: String },
   position: { type: String },
   reportingManager: { type: String },
   // Employee ID for current employees/interns
-  employeeId: { 
-    type: String, 
-    unique: true, 
+  employeeId: {
+    type: String,
+    unique: true,
     sparse: true // Only required for employees, allows null values 
   },
   terminatedAt: {

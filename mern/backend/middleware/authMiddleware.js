@@ -29,10 +29,10 @@ const auth = async (req, res, next) => {
         authLog("Auth: verifying");
         const decoded = jwt.verify(token, authConfig.jwtSecret);
         authLog(`Auth: valid for ${decoded.userId}`);
-        
+
         // Fetch full user details to populate permissions and assignedJobs
         const user = await User.findById(decoded.userId);
-        
+
         if (!user) {
             authLog("Auth: user not found");
             return res.status(401).json({ message: "User not found. Authentication failed." });
@@ -43,7 +43,7 @@ const auth = async (req, res, next) => {
             ...user.toObject(),
             userId: user._id.toString() // For compatibility with existing code
         };
-        
+
         next();
     } catch (error) {
         console.error("Auth: verification failed:", error.message);
@@ -106,7 +106,7 @@ const verifyAdmin = async (req, res, next) => {
         if (user.role !== ROLES.ADMIN && user.role !== ROLES.SUPER_ADMIN) {
             authLog("Admin: not admin");
             return res.status(403).json({ message: "Access denied. Admins only." });
-        }        
+        }
         console.log("Admin: granted");
         authLog("Admin: granted");
         req.user = user;
@@ -156,15 +156,15 @@ const verifyReviewEligibility = async (req, res, next) => {
         }
 
         authLog("ReviewEligibility: access denied for this role/status");
-        return res.status(403).json({ 
-            message: "Access denied. Only current employees can access this feature." 
+        return res.status(403).json({
+            message: "Access denied. Only current employees can access this feature."
         });
 
         // Note: Offer recipient logic remains for backward compatibility with applications 
         // that still use the offerLetter status logic below.
 
         // Check if user has received an offer letter (backup check)
-        const offerLetter = await OfferLetter.findOne({ 
+        const offerLetter = await OfferLetter.findOne({
             $or: [
                 { userId: user._id },
                 { email: user.email }
@@ -181,8 +181,8 @@ const verifyReviewEligibility = async (req, res, next) => {
 
         // If no offer letter found, deny access
         authLog("ReviewEligibility: not eligible");
-        return res.status(403).json({ 
-            message: "Access denied. Only employees or offer letter recipients can write reviews." 
+        return res.status(403).json({
+            message: "Access denied. Only employees or offer letter recipients can write reviews."
         });
 
     } catch (error) {
@@ -209,7 +209,7 @@ const authenticateToken = async (req, res, next) => {
 
         const decoded = jwt.verify(token, authConfig.jwtSecret);
         const user = await User.findById(decoded.userId);
-        
+
         if (!user) {
             authLog("AuthenticateToken: user not found");
             return res.status(404).json({ message: "User not found" });
@@ -247,13 +247,13 @@ const isAdmin = (req, res, next) => {
 // Middleware to verify user is employee/intern (has employeeId and is employee)
 const isEmployee = (req, res, next) => {
     if (req.user.role === ROLES.ADMIN || req.user.role === ROLES.SUPER_ADMIN) return next();
-    
-    const hasEmployeeAccess = req.user.role === ROLES.EMPLOYEE || 
-                             req.user.status === 'active';
+
+    const hasEmployeeAccess = req.user.role === ROLES.EMPLOYEE ||
+        req.user.status === 'active';
 
     if (!hasEmployeeAccess) {
-        return res.status(403).json({ 
-            message: "Access denied. Only current employees/interns can access this resource." 
+        return res.status(403).json({
+            message: "Access denied. Only current employees/interns can access this resource."
         });
     }
     next();
@@ -262,13 +262,13 @@ const isEmployee = (req, res, next) => {
 // Middleware to verify user is only an employee (not intern/offer recipient)
 const isEmployeeOnly = (req, res, next) => {
     if (req.user.role === ROLES.ADMIN || req.user.role === ROLES.SUPER_ADMIN) return next();
-    
-    const isFullEmployee = req.user.role === ROLES.EMPLOYEE || 
-                          req.user.status === 'active';
+
+    const isFullEmployee = req.user.role === ROLES.EMPLOYEE ||
+        req.user.status === 'active';
 
     if (!isFullEmployee) {
-        return res.status(403).json({ 
-            message: "Access denied. Only current employees can make job recommendations." 
+        return res.status(403).json({
+            message: "Access denied. Only current employees can make job recommendations."
         });
     }
     next();
@@ -286,9 +286,9 @@ const verifySuperAdmin = async (req, res, next) => {
 
         const decoded = jwt.verify(token, authConfig.jwtSecret);
         authLog("SuperAdmin: decoded user ID:", decoded.userId);
-        
+
         const user = await User.findById(decoded.userId);
-        
+
         if (!user) {
             authLog("SuperAdmin: user not found");
             return res.status(404).json({ message: "User not found" });
@@ -297,8 +297,8 @@ const verifySuperAdmin = async (req, res, next) => {
         // Check if user has super-admin role
         if (user.role !== ROLES.SUPER_ADMIN) {
             authLog("SuperAdmin: access denied - not super-admin");
-            return res.status(403).json({ 
-                message: "Access denied. Super Admin role required for this operation." 
+            return res.status(403).json({
+                message: "Access denied. Super Admin role required for this operation."
             });
         }
 
@@ -320,12 +320,12 @@ const verifySuperAdmin = async (req, res, next) => {
 const isHR = (req, res, next) => {
     const userRole = (req.user.role || '').toLowerCase();
     const userDept = (req.user.department || '').toLowerCase();
-    
-    const isHRUser = userDept === 'hr' || 
-                    userDept === 'human resources' ||
-                    userRole === 'hr' || 
-                    userRole === 'admin' || 
-                    userRole === 'super-admin';
+
+    const isHRUser = userDept === 'hr' ||
+        userDept === 'human resources' ||
+        userRole === 'hr' ||
+        userRole === 'admin' ||
+        userRole === 'super-admin';
 
     if (!isHRUser) {
         return res.status(403).json({ message: "Access denied. HR or Admin access required." });
@@ -344,10 +344,10 @@ const hasPermission = (permission) => {
             return next();
         }
 
-        const isHRDept = userDept === 'hr' || 
-                        userDept === 'human resources' || 
-                        userRole === 'hr';
-        
+        const isHRDept = userDept === 'hr' ||
+            userDept === 'human resources' ||
+            userRole === 'hr';
+
         console.log(`Permission Check: "${permission}" for user ${req.user.email}`);
         console.log(`- Role: ${req.user.role}, Dept: ${req.user.department}, isHRDept: ${isHRDept}`);
         console.log(`- Permissions:`, JSON.stringify(req.user.permissions));
@@ -355,10 +355,10 @@ const hasPermission = (permission) => {
         if (isHRDept) {
             // Default permissions for HR department if not explicitly set
             const userPermissions = req.user.permissions || {};
-            
+
             // Critical permissions that HR should have by default in the new system
             const defaultHRPermissions = ['canViewApplicants', 'canCreateJob', 'canManageReviews'];
-            
+
             const hasExplicitPerm = userPermissions[permission] === true;
             const hasDefaultPerm = defaultHRPermissions.includes(permission) && userPermissions[permission] !== false;
 
@@ -368,10 +368,10 @@ const hasPermission = (permission) => {
                 console.log(`- Permission GRANTED`);
                 return next();
             }
-            
+
             console.log(`- Permission DENIED (HR Dept)`);
-            return res.status(403).json({ 
-                message: `Access denied. You do not have permission: ${permission}` 
+            return res.status(403).json({
+                message: `Access denied. You do not have permission: ${permission}`
             });
         }
 
@@ -384,9 +384,9 @@ const hasPermission = (permission) => {
 // Middleware to check if HR is assigned to a specific job
 const checkJobAssignment = async (req, res, next) => {
     const rawJobOrEntityId = req.params.jobId || req.body.jobId || req.params.id || req.params.applicationId;
-    
+
     if (!rawJobOrEntityId) {
-        return next(); 
+        return next();
     }
 
     let resolvedJobId = rawJobOrEntityId;
@@ -410,9 +410,9 @@ const checkJobAssignment = async (req, res, next) => {
         return next();
     }
 
-    const isHRDept = userDept === 'hr' || 
-                    userDept === 'human resources' || 
-                    userRole === 'hr';
+    const isHRDept = userDept === 'hr' ||
+        userDept === 'human resources' ||
+        userRole === 'hr';
 
     if (isHRDept) {
         const isAssigned = req.user.assignedJobs && req.user.assignedJobs.some(id => id.toString() === resolvedJobId.toString());
@@ -425,13 +425,13 @@ const checkJobAssignment = async (req, res, next) => {
     return res.status(403).json({ message: "Access denied." });
 };
 
-module.exports = { 
-    auth, 
+module.exports = {
+    auth,
     optionalAuth,
-    verifyAdmin, 
-    verifyReviewEligibility, 
-    authenticateToken, 
-    isAdmin, 
+    verifyAdmin,
+    verifyReviewEligibility,
+    authenticateToken,
+    isAdmin,
     isHR,
     hasPermission,
     checkJobAssignment,

@@ -12,7 +12,7 @@ import { toast } from 'react-toastify';
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-   
+
   const { currentUser, isAdmin, isHR } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -105,7 +105,7 @@ const Jobs = () => {
   useEffect(() => {
     if (location.state?.success && location.state?.message) {
       toast.success(location.state.message);
-      
+
       // Clear the location state
       navigate('.', { replace: true, state: {} });
     }
@@ -402,7 +402,7 @@ const Jobs = () => {
 
 
 
-        
+
         <div className="flex items-center gap-2 ml-auto">
           {/* Inline filters - Right aligned */}
           <div className="hidden sm:flex items-center gap-2 pr-2 border-r border-gray-700/30 mr-1">
@@ -791,21 +791,21 @@ const Jobs = () => {
       {/* Mobile Filter Modal - Premium Glassmorphism */}
       {showFilters && (
         <div className="lg:hidden fixed inset-0 z-[100] flex items-end justify-center p-0">
-          <div 
+          <div
             className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-500 animate-in fade-in"
             onClick={() => setShowFilters(false)}
           ></div>
-          
+
           <div className="relative w-full max-w-2xl bg-white rounded-t-[2rem] border-t border-slate-200 shadow-[0_-20px_60px_rgba(15,23,42,0.18)] p-5 pb-6 transform transition-all duration-300 ease-out animate-in slide-in-from-bottom-full h-auto max-h-[70vh] overflow-y-auto overflow-x-hidden flex flex-col">
             {/* Modal Drag Indicator */}
             <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-4 shrink-0"></div>
-            
+
             <div className="flex items-center justify-between mb-6 px-1">
               <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">
                 Refine <span className="text-emerald-600">jobs</span>
               </h3>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => {
                     setFilterType('');
                     setSortBy('newest');
@@ -814,7 +814,7 @@ const Jobs = () => {
                 >
                   Reset
                 </button>
-                <button 
+                <button
                   onClick={() => setShowFilters(false)}
                   className="p-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-100 transition-all active:scale-90"
                 >
@@ -824,7 +824,7 @@ const Jobs = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="space-y-6 flex-1 px-1">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-[0.16em] text-slate-500 mb-3 ml-1">Job category</label>
@@ -846,7 +846,7 @@ const Jobs = () => {
                   ))}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-[0.16em] text-slate-500 mb-3 ml-1">Sort by</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -867,7 +867,7 @@ const Jobs = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-8 shrink-0">
               <button
                 onClick={() => setShowFilters(false)}

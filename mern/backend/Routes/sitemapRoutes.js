@@ -9,19 +9,19 @@ router.get('/sitemap.xml', async (req, res) => {
       isActive: true,
       $or: [{ isPublished: true }, { isPublished: { $exists: false } }]
     }).select('slug updatedAt createdAt').exec();
-    
+
     const baseUrl = 'https://fmpg.vercel.app';
-    
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-    
+
     // Core routes
     xml += `  <url>\n`;
     xml += `    <loc>${baseUrl}/</loc>\n`;
     xml += `    <changefreq>daily</changefreq>\n`;
     xml += `    <priority>1.0</priority>\n`;
     xml += `  </url>\n`;
-    
+
     xml += `  <url>\n`;
     xml += `    <loc>${baseUrl}/jobs</loc>\n`;
     xml += `    <changefreq>daily</changefreq>\n`;
@@ -39,7 +39,7 @@ router.get('/sitemap.xml', async (req, res) => {
       // Use fallback exactly as in frontend routing
       const identifier = job.slug || job._id;
       const lastMod = (job.updatedAt || job.createdAt || new Date()).toISOString().split('T')[0];
-      
+
       xml += `  <url>\n`;
       xml += `    <loc>${baseUrl}/apply/${identifier}</loc>\n`;
       xml += `    <lastmod>${lastMod}</lastmod>\n`;

@@ -78,14 +78,14 @@ exports.createJob = async (req, res) => {
   try {
     const { title, company, description, requirements, responsibilities, position, department, location, type, salary, questions, hrContact, isPublished } = req.body;
     console.log(`Job: ${title}`);
-    
+
     if (!title || !description) {
       console.log("Missing fields");
       return res.status(400).json({ message: "Title and description are required" });
     }
-    
+
     console.log('ReqBody:', req.body);
-    
+
     // Parse questions if string
     let parsedQuestions = [];
     if (questions) {
@@ -101,7 +101,7 @@ exports.createJob = async (req, res) => {
         parsedQuestions = questions;
       }
     }
-    
+
     let parsedHrContact = {};
     if (hrContact) {
       if (typeof hrContact === 'string') {
@@ -114,7 +114,7 @@ exports.createJob = async (req, res) => {
         parsedHrContact = hrContact;
       }
     }
-    
+
     // Create job
     const job = new Job({
       title,
@@ -132,44 +132,44 @@ exports.createJob = async (req, res) => {
       postedBy: req.user._id,
       isPublished: isPublished === true || isPublished === 'true'
     });
-    
+
     // Handle image upload to Cloudinary
     if (req.file) {
       console.log("Uploading image to Cloudinary...");
       console.log(`Image details: ${req.file.originalname}, Size: ${(req.file.size / 1024 / 1024).toFixed(2)}MB`);
-      
+
       let uploadAttempt = 0;
       const maxRetries = 3;
-      
+
       while (uploadAttempt < maxRetries) {
         try {
           // Upload directly from buffer to Cloudinary
           const cloudinaryResult = await uploadImage(req.file.buffer, 'job-images');
-          
+
           // Store Cloudinary URL and public ID
           job.imageUrl = cloudinaryResult.secure_url;
           job.cloudinaryPublicId = cloudinaryResult.public_id;
           console.log("Image uploaded to Cloudinary successfully:", cloudinaryResult.secure_url);
           break; // Success, exit retry loop
-          
+
         } catch (uploadError) {
           uploadAttempt++;
           console.error(`Cloudinary upload attempt ${uploadAttempt} failed:`, uploadError.message);
-          
+
           if (uploadAttempt >= maxRetries) {
             console.error("All upload attempts failed");
-            return res.status(500).json({ 
-              message: "Failed to upload image after multiple attempts", 
-              error: uploadError.message 
+            return res.status(500).json({
+              message: "Failed to upload image after multiple attempts",
+              error: uploadError.message
             });
           }
-          
+
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 2000 * uploadAttempt));
         }
       }
     }
-    
+
     console.log("Saving job");
     const savedJob = await job.save();
     console.log(`Created: ${savedJob._id}`);
@@ -178,7 +178,7 @@ exports.createJob = async (req, res) => {
       const User = require("../models/user");
       await User.findByIdAndUpdate(req.user._id, { $addToSet: { assignedJobs: savedJob._id } });
     }
-    
+
     // Log the action
     await logAudit({
       req,
@@ -187,12 +187,12 @@ exports.createJob = async (req, res) => {
       resourceId: savedJob._id,
       changes: { new: savedJob.toObject() }
     });
-    
+
     res.status(201).json({
       message: "Job posted successfully",
       job: savedJob
     });
-    
+
   } catch (error) {
     console.error("Error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -205,10 +205,10 @@ exports.getFeaturedJobs = async (req, res) => {
   try {
     // Active jobs
     const featuredJobs = await Job.find(publicJobFilter)
-    .sort({ createdAt: -1 }) // Newest first
-    .limit(5) // 5 max
-    .lean();
-    
+      .sort({ createdAt: -1 }) // Newest first
+      .limit(5) // 5 max
+      .lean();
+
     console.log(`Found: ${featuredJobs.length}`);
     res.status(200).json(featuredJobs);
   } catch (error) {
@@ -227,10 +227,10 @@ exports.getJobs = async (req, res) => {
       query = {};
     } else if (req.user?.permissions?.canManageJobs === true &&
       ['hr', 'human resources'].includes((req.user.department || '').toLowerCase())) {
-      const assignedJobIds = Array.isArray(req.user.assignedJobs) 
-        ? req.user.assignedJobs.map(id => id.toString()) 
+      const assignedJobIds = Array.isArray(req.user.assignedJobs)
+        ? req.user.assignedJobs.map(id => id.toString())
         : [];
-      
+
       if (assignedJobIds.length > 0) {
         query = {
           $or: [
@@ -295,7 +295,7 @@ exports.updateJob = async (req, res) => {
       console.log(`Not found: ${req.params.id}`);
       return res.status(404).json({ message: "Job not found" });
     }
-    
+
     // Store original job data for notification comparison
     const oldJobData = {
       title: existingJob.title,
@@ -305,11 +305,11 @@ exports.updateJob = async (req, res) => {
       department: existingJob.department,
       position: existingJob.position
     };
-    
+
     const updates = req.body;
     updates.updatedAt = Date.now();
     console.log(`Fields: ${Object.keys(updates).join(', ')}`);
-    
+
     // Parse questions if string
     if (typeof updates.questions === 'string') {
       try {
@@ -320,7 +320,7 @@ exports.updateJob = async (req, res) => {
         return res.status(400).json({ message: "Invalid questions format. Please provide a valid JSON array." });
       }
     }
-    
+
     // Parse hrContact if string
     if (typeof updates.hrContact === 'string') {
       try {
@@ -337,20 +337,20 @@ exports.updateJob = async (req, res) => {
     if (typeof updates.title === 'string' && updates.title.trim()) {
       updates.slug = await ensureUniqueJobSlug(slugBase(updates.title), existingJob._id);
     }
-    
+
     // Handle image upload to Cloudinary
     if (req.file) {
       console.log("Uploading new image to Cloudinary...");
       console.log(`Image details: ${req.file.originalname}, Size: ${(req.file.size / 1024 / 1024).toFixed(2)}MB`);
-      
+
       let uploadAttempt = 0;
       const maxRetries = 3;
-      
+
       while (uploadAttempt < maxRetries) {
         try {
           // Upload directly from buffer to Cloudinary
           const cloudinaryResult = await uploadImage(req.file.buffer, 'job-images');
-          
+
           // Delete old image from Cloudinary if it exists
           if (existingJob.cloudinaryPublicId) {
             try {
@@ -360,25 +360,25 @@ exports.updateJob = async (req, res) => {
               console.warn("Failed to delete old image from Cloudinary:", deleteError.message);
             }
           }
-          
+
           // Update with new Cloudinary data
           updates.imageUrl = cloudinaryResult.secure_url;
           updates.cloudinaryPublicId = cloudinaryResult.public_id;
           console.log("New image uploaded to Cloudinary successfully:", cloudinaryResult.secure_url);
           break; // Success, exit retry loop
-          
+
         } catch (uploadError) {
           uploadAttempt++;
           console.error(`Cloudinary upload attempt ${uploadAttempt} failed:`, uploadError.message);
-          
+
           if (uploadAttempt >= maxRetries) {
             console.error("All upload attempts failed");
-            return res.status(500).json({ 
-              message: "Failed to upload image after multiple attempts", 
-              error: uploadError.message 
+            return res.status(500).json({
+              message: "Failed to upload image after multiple attempts",
+              error: uploadError.message
             });
           }
-          
+
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 2000 * uploadAttempt));
         }
@@ -388,14 +388,14 @@ exports.updateJob = async (req, res) => {
       delete updates.imageUrl;
       delete updates.cloudinaryPublicId;
     }
-    
+
     // Update job
     const job = await Job.findOneAndUpdate(
       { _id: existingJob._id },
       { $set: updates },
       { new: true, runValidators: true }
     );
-    
+
     // Log the update action
     await logAudit({
       req,
@@ -407,11 +407,11 @@ exports.updateJob = async (req, res) => {
         newData: job.toObject()
       }
     });
-    
+
     console.log(`Updated: ${job.title}`);
-    console.log("Images:", { 
-      image: job.image || 'none', 
-      imageUrl: job.imageUrl || 'none' 
+    console.log("Images:", {
+      image: job.image || 'none',
+      imageUrl: job.imageUrl || 'none'
     });
 
     // Create notifications for job requirement updates asynchronously
@@ -424,7 +424,7 @@ exports.updateJob = async (req, res) => {
         // Don't fail the job update if notification creation fails
       }
     });
-    
+
     res.status(200).json({
       message: "Job updated successfully",
       job
@@ -450,12 +450,12 @@ exports.deleteJob = async (req, res) => {
       { isActive: false },
       { new: true }
     );
-    
+
     if (!job) {
       console.log(`Not found: ${req.params.id}`);
       return res.status(404).json({ message: "Job not found" });
     }
-    
+
     // Log the delete action
     await logAudit({
       req,
@@ -467,7 +467,7 @@ exports.deleteJob = async (req, res) => {
         newData: { isActive: false }
       }
     });
-    
+
     console.log(`Deactivated: ${job.title}`);
     res.status(200).json({
       message: "Job deleted successfully"
@@ -499,14 +499,14 @@ exports.searchJobs = async (req, res) => {
   console.log("Search jobs");
   try {
     const { query } = req.query;
-    
+
     if (!query) {
       console.log("No query");
       return res.status(400).json({ message: "Search query is required" });
     }
-    
+
     console.log(`Query: "${query}"`);
-    
+
     const jobs = await Job.find({
       $and: [
         publicJobFilter,
@@ -519,7 +519,7 @@ exports.searchJobs = async (req, res) => {
         }
       ]
     }).sort({ createdAt: -1 }).lean();
-    
+
     console.log(`Found: ${jobs.length}`);
     res.status(200).json(jobs);
   } catch (error) {
@@ -534,25 +534,25 @@ exports.filterJobs = async (req, res) => {
   try {
     const { location, type, minSalary, maxSalary } = req.query;
     const filter = { ...publicJobFilter };
-    
+
     if (location) {
       filter.location = { $regex: location, $options: 'i' };
     }
-    
+
     if (type) {
       filter.type = type;
     }
-    
+
     if (minSalary || maxSalary) {
       filter.salary = {};
       if (minSalary) filter.salary.$gte = parseInt(minSalary);
       if (maxSalary) filter.salary.$lte = parseInt(maxSalary);
     }
-    
+
     console.log("Criteria:", filter);
-    
+
     const jobs = await Job.find(filter).sort({ createdAt: -1 }).lean();
-    
+
     console.log(`Found: ${jobs.length}`);
     res.status(200).json(jobs);
   } catch (error) {
@@ -567,18 +567,18 @@ exports.sortJobs = async (req, res) => {
   try {
     const { sortBy, order } = req.query;
     const sortOrder = order?.toLowerCase() === 'desc' ? -1 : 1;
-    
+
     let sortCriteria = { createdAt: -1 }; // Default
-    
+
     if (sortBy) {
       sortCriteria = {};
       sortCriteria[sortBy] = sortOrder;
     }
-    
+
     console.log(`Sort: ${Object.keys(sortCriteria)[0]}, ${sortOrder === 1 ? 'asc' : 'desc'}`);
-    
+
     const jobs = await Job.find(publicJobFilter).sort(sortCriteria).lean();
-    
+
     console.log(`Sorted: ${jobs.length}`);
     res.status(200).json(jobs);
   } catch (error) {
@@ -593,31 +593,31 @@ exports.addJobQuestion = async (req, res) => {
   try {
     const { jobId } = req.params;
     const { questionText, questionType, required, options, maxRating, order } = req.body;
-    
+
     // Validate
     if (!questionText || !questionType) {
       console.log("Missing fields");
       return res.status(400).json({ message: "Question text and type are required" });
     }
-    
+
     // Check type
     const validTypes = ["text", "multipleChoice", "checkbox", "file", "rating"];
     if (!validTypes.includes(questionType)) {
       console.log(`Invalid type: ${questionType}`);
-      return res.status(400).json({ 
-        message: "Invalid question type. Must be one of: text, multipleChoice, checkbox, file, rating" 
+      return res.status(400).json({
+        message: "Invalid question type. Must be one of: text, multipleChoice, checkbox, file, rating"
       });
     }
-    
+
     // Check options
-    if ((questionType === "multipleChoice" || questionType === "checkbox") && 
-        (!options || !Array.isArray(options) || options.length === 0)) {
+    if ((questionType === "multipleChoice" || questionType === "checkbox") &&
+      (!options || !Array.isArray(options) || options.length === 0)) {
       console.log("Options required");
-      return res.status(400).json({ 
-        message: "Options are required for multiple choice or checkbox questions" 
+      return res.status(400).json({
+        message: "Options are required for multiple choice or checkbox questions"
       });
     }
-    
+
     const job = await findJobByIdentifier(jobId);
     if (!job) {
       console.log(`Job not found: ${jobId}`);
@@ -626,7 +626,7 @@ exports.addJobQuestion = async (req, res) => {
     if (!isPubliclyVisible(job) && !canManageJob(req.user, job)) {
       return res.status(403).json({ message: "Access denied. This job is not published." });
     }
-    
+
     // Create question
     const newQuestion = {
       questionText,
@@ -636,14 +636,14 @@ exports.addJobQuestion = async (req, res) => {
       maxRating: maxRating || 5,
       order: order || (job.questions.length > 0 ? Math.max(...job.questions.map(q => q.order)) + 1 : 0)
     };
-    
+
     // Add to job
     job.questions.push(newQuestion);
     job.updatedAt = Date.now();
-    
+
     await job.save();
     console.log(`Q added: ${jobId}`);
-    
+
     res.status(201).json({
       message: "Question added successfully",
       job
@@ -661,20 +661,20 @@ exports.updateJobQuestion = async (req, res) => {
     const { jobId } = req.params;
     const { questionId } = req.params;
     const { questionText, questionType, required, options, maxRating, order } = req.body;
-    
+
     const job = await findJobByIdentifier(jobId);
     if (!job) {
       console.log(`Job not found: ${jobId}`);
       return res.status(404).json({ message: "Job not found" });
     }
-    
+
     // Find question
     const questionIndex = job.questions.findIndex(q => q._id.toString() === questionId);
     if (questionIndex === -1) {
       console.log(`Q not found: ${questionId}`);
       return res.status(404).json({ message: "Question not found" });
     }
-    
+
     // Update fields
     if (questionText) job.questions[questionIndex].questionText = questionText;
     if (questionType) job.questions[questionIndex].questionType = questionType;
@@ -682,11 +682,11 @@ exports.updateJobQuestion = async (req, res) => {
     if (options) job.questions[questionIndex].options = options;
     if (maxRating) job.questions[questionIndex].maxRating = maxRating;
     if (order !== undefined) job.questions[questionIndex].order = order;
-    
+
     job.updatedAt = Date.now();
     await job.save();
     console.log(`Q updated: ${jobId}`);
-    
+
     res.status(200).json({
       message: "Question updated successfully",
       job
@@ -702,26 +702,26 @@ exports.deleteJobQuestion = async (req, res) => {
   console.log(`Delete Q: ${req.params.jobId}`);
   try {
     const { jobId, questionId } = req.params;
-    
+
     const job = await findJobByIdentifier(jobId);
     if (!job) {
       console.log(`Job not found: ${jobId}`);
       return res.status(404).json({ message: "Job not found" });
     }
-    
+
     // Remove question
     const initialLength = job.questions.length;
     job.questions = job.questions.filter(q => q._id.toString() !== questionId);
-    
+
     if (job.questions.length === initialLength) {
       console.log(`Q not found: ${questionId}`);
       return res.status(404).json({ message: "Question not found" });
     }
-    
+
     job.updatedAt = Date.now();
     await job.save();
     console.log(`Q deleted: ${jobId}`);
-    
+
     res.status(200).json({
       message: "Question deleted successfully",
       job
@@ -738,24 +738,24 @@ exports.reorderJobQuestions = async (req, res) => {
   try {
     const { jobId } = req.params;
     const { questionOrder } = req.body;
-    
+
     if (!questionOrder || !Array.isArray(questionOrder)) {
       console.log("Invalid order");
       return res.status(400).json({ message: "Question order must be an array of question IDs" });
     }
-    
+
     const job = await findJobByIdentifier(jobId);
     if (!job) {
       console.log(`Job not found: ${jobId}`);
       return res.status(404).json({ message: "Job not found" });
     }
-    
+
     // Map for lookup
     const questionsMap = {};
     job.questions.forEach(q => {
       questionsMap[q._id.toString()] = q;
     });
-    
+
     // Reorder questions
     const reorderedQuestions = [];
     for (let i = 0; i < questionOrder.length; i++) {
@@ -767,17 +767,17 @@ exports.reorderJobQuestions = async (req, res) => {
         delete questionsMap[qId];
       }
     }
-    
+
     // Add remaining
     Object.values(questionsMap).forEach(q => {
       reorderedQuestions.push(q);
     });
-    
+
     job.questions = reorderedQuestions;
     job.updatedAt = Date.now();
     await job.save();
     console.log(`Q reordered: ${jobId}`);
-    
+
     res.status(200).json({
       message: "Questions reordered successfully",
       job
@@ -793,7 +793,7 @@ exports.getJobQuestions = async (req, res) => {
   console.log(`Get Q: ${req.params.jobId}`);
   try {
     const { jobId } = req.params;
-    
+
     const job = await findJobByIdentifier(jobId);
     if (!job) {
       console.log(`Job not found: ${jobId}`);
@@ -802,10 +802,10 @@ exports.getJobQuestions = async (req, res) => {
     if (!isPubliclyVisible(job) && !canManageJob(req.user, job)) {
       return res.status(403).json({ message: "Access denied. This job is not published." });
     }
-    
+
     // Sort by order
     const sortedQuestions = [...job.questions].sort((a, b) => a.order - b.order);
-    
+
     console.log(`Found: ${sortedQuestions.length}`);
     res.status(200).json(sortedQuestions);
   } catch (error) {

@@ -62,10 +62,10 @@ const jobSchema = new mongoose.Schema({
   // Adding questions field for application form
   questions: [{
     questionText: { type: String, required: true },
-    questionType: { 
-      type: String, 
+    questionType: {
+      type: String,
       enum: ["text", "multipleChoice", "checkbox", "file", "rating"],
-      required: true 
+      required: true
     },
     required: { type: Boolean, default: false },
     options: [String], // For multiple choice or checkbox questions
@@ -84,7 +84,7 @@ jobSchema.index({ location: 'text', title: 'text', description: 'text' });
 jobSchema.index({ department: 1 });
 jobSchema.index({ type: 1 });
 
-jobSchema.pre('validate', async function() {
+jobSchema.pre('validate', async function () {
   if (!this.slug || this.isModified('title') || this.isModified('position')) {
     const base = slugBase(this.title || this.position);
     this.slug = await ensureUniqueSlug(this.constructor, base, this._id);

@@ -19,7 +19,7 @@ const users = [
     password: 'Prince1@',
     role: 'admin',
     status: 'active',
-    role: "super-admin", 
+    role: "super-admin",
     department: 'IT',
     position: 'IT Manager',
     employeeId: 'EMP001'
@@ -475,9 +475,9 @@ const seedDatabase = async () => {
         questionText: question.questionText,
         questionType: question.questionType,
         answer: question.questionType === 'text' ? 'Sample answer to the question' :
-               question.questionType === 'rating' ? 4 :
-               question.questionType === 'multipleChoice' ? question.options[0] :
-               question.questionType === 'checkbox' ? [question.options[0], question.options[1]] : ''
+          question.questionType === 'rating' ? 4 :
+            question.questionType === 'multipleChoice' ? question.options[0] :
+              question.questionType === 'checkbox' ? [question.options[0], question.options[1]] : ''
       })) || []
     }));
     const createdApplications = await Application.insertMany(applicationsWithIds);
@@ -541,7 +541,7 @@ const seedDatabase = async () => {
     const createdReviews = await Review.insertMany(reviewsWithUserId);
     console.log(`⭐ Created ${createdReviews.length} reviews`);
 
-    
+
     // const createdRecommendations = await Recommendation.insertMany(recommendationsWithUserId);
     // console.log(`🤝 Created ${createdRecommendations.length} recommendations`);
 
@@ -554,7 +554,7 @@ const seedDatabase = async () => {
     console.log(`   Offer Letters: ${createdOfferLetters.length}`);
     console.log(`   Reviews: ${createdReviews.length}`);
     // console.log(`   Recommendations: ${createdRecommendations.length}`);
-    
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error);

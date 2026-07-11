@@ -56,14 +56,14 @@ const transporter = nodemailer.createTransport({
 exports.createApplication = async (req, res) => {
   console.log("App: auth user");
   try {
-    const { 
-      jobId, 
-      fullName, 
-      email, 
-      phone, 
-      experience, 
-      education, 
-      skills, 
+    const {
+      jobId,
+      fullName,
+      email,
+      phone,
+      experience,
+      education,
+      skills,
       coverLetter,
       isReferred,
       referrerEmployeeId,
@@ -73,14 +73,14 @@ exports.createApplication = async (req, res) => {
       recaptchaToken
     } = req.body;
     let questionAnswers = req.body.questionAnswers;
-    
+
     // Verify reCAPTCHA
     const remoteIP = req.ip || req.connection.remoteAddress;
     const recaptchaVerification = await recaptchaService.verifyToken(recaptchaToken, remoteIP);
-    
+
     if (!recaptchaVerification.success) {
       console.log("reCAPTCHA verification failed:", recaptchaVerification.error);
-      
+
       // Provide more specific error messages
       let errorMessage = "reCAPTCHA verification failed. Please try again.";
       if (recaptchaVerification.error === 'reCAPTCHA not configured') {
@@ -88,25 +88,25 @@ exports.createApplication = async (req, res) => {
       } else if (recaptchaVerification.error === 'reCAPTCHA token is required') {
         errorMessage = "Please complete the reCAPTCHA challenge before submitting.";
       }
-      
-      return res.status(400).json({ 
+
+      return res.status(400).json({
         message: errorMessage,
         error: recaptchaVerification.error
       });
     }
-    
+
     console.log("reCAPTCHA verified successfully");
-    
+
     // Validate phone number
     if (!phone || phone.trim() === '') {
       return res.status(400).json({ message: "Phone number is required" });
     }
-    
+
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length !== 10) {
       return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
     }
-    
+
     // Parse JSON answers
     if (questionAnswers && typeof questionAnswers === 'string') {
       try {
@@ -117,7 +117,7 @@ exports.createApplication = async (req, res) => {
         return res.status(400).json({ message: "Invalid question answers format" });
       }
     }
-    
+
     const job = await findJobByIdentifier(jobId);
 
     if (!job || !job.isActive || job.isPublished === false) {
@@ -134,7 +134,7 @@ exports.createApplication = async (req, res) => {
 
     if (existingApplication) {
       console.log(`User ${req.user.userId} has already applied for job ${jobId} with status: ${existingApplication.status}`);
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "You have already applied for this job. You can only apply again if your previous application was rejected.",
         existingApplicationId: existingApplication._id,
         existingApplicationStatus: existingApplication.status
@@ -148,27 +148,27 @@ exports.createApplication = async (req, res) => {
     //     employeeId: referrerEmployeeId,
     //     status: "active"
     //   });
-      
+
     //   if (!referrer) {
     //     console.log(`Application: invalid referrer ID ${referrerEmployeeId}`);
     //     return res.status(400).json({ 
     //       message: "Invalid employee ID. Please verify the employee ID with your referrer." 
     //     });
     //   }
-      
+
     //   // Verify referrer name and email match if provided
     //   if (referrerName && referrer.name.toLowerCase() !== referrerName.toLowerCase()) {
     //     return res.status(400).json({ 
     //       message: "Referrer name does not match our records. Please check the details." 
     //     });
     //   }
-      
+
     //   if (referrerEmail && referrer.email.toLowerCase() !== referrerEmail.toLowerCase()) {
     //     return res.status(400).json({ 
     //       message: "Referrer email does not match our records. Please check the details." 
     //     });
     //   }
-      
+
     //   console.log(`Application: valid referrer found ${referrer.name}`);
     // }
 
@@ -177,20 +177,20 @@ exports.createApplication = async (req, res) => {
     if (req.file) {
       console.log("Uploading resume to Cloudinary...");
       console.log(`File size: ${(req.file.size / 1024 / 1024).toFixed(2)}MB`);
-      
+
       let uploadAttempt = 0;
       const maxRetries = 3;
-      
+
       while (uploadAttempt < maxRetries) {
         try {
           // Upload directly from buffer to Cloudinary
           const cloudinaryResult = await uploadFile(
-            req.file.buffer, 
-            'resumes', 
-            'raw', 
+            req.file.buffer,
+            'resumes',
+            'raw',
             req.file.originalname
           );
-          
+
           // Store Cloudinary URL and public ID
           resumeData = {
             resumeUrl: cloudinaryResult.secure_url,
@@ -198,19 +198,19 @@ exports.createApplication = async (req, res) => {
           };
           console.log("Resume uploaded to Cloudinary:", cloudinaryResult.secure_url);
           break; // Success, exit retry loop
-          
+
         } catch (uploadError) {
           uploadAttempt++;
           console.error(`Cloudinary upload attempt ${uploadAttempt} failed:`, uploadError.message);
-          
+
           if (uploadAttempt >= maxRetries) {
             console.error("All upload attempts failed");
-            return res.status(500).json({ 
-              message: "Failed to upload resume after multiple attempts", 
-              error: uploadError.message 
+            return res.status(500).json({
+              message: "Failed to upload resume after multiple attempts",
+              error: uploadError.message
             });
           }
-          
+
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 2000 * uploadAttempt));
         }
@@ -255,7 +255,7 @@ exports.submitApplication = async (req, res) => {
   try {
     const { jobId, fullName, email, phone, experience, education, skills, coverLetter } = req.body;
     let questionAnswers = req.body.questionAnswers;
-    
+
     // Parse JSON answers
     if (questionAnswers && typeof questionAnswers === 'string') {
       try {
@@ -266,32 +266,32 @@ exports.submitApplication = async (req, res) => {
         return res.status(400).json({ message: "Invalid question answers format" });
       }
     }
-    
+
     const job = await findJobByIdentifier(jobId);
     if (!job || !job.isActive || job.isPublished === false) {
       console.log("Inactive job:", jobId);
       return res.status(404).json({ message: "Job not found or no longer active" });
     }
-    
+
     // Handle resume upload to Cloudinary
     let resumeData = {};
     if (req.file) {
       console.log("Uploading resume to Cloudinary...");
       console.log(`File size: ${(req.file.size / 1024 / 1024).toFixed(2)}MB`);
-      
+
       let uploadAttempt = 0;
       const maxRetries = 3;
-      
+
       while (uploadAttempt < maxRetries) {
         try {
           // Upload directly from buffer to Cloudinary
           const cloudinaryResult = await uploadFile(
-            req.file.buffer, 
-            'resumes', 
-            'raw', 
+            req.file.buffer,
+            'resumes',
+            'raw',
             req.file.originalname
           );
-          
+
           // Store Cloudinary URL and public ID
           resumeData = {
             resumeUrl: cloudinaryResult.secure_url,
@@ -299,25 +299,25 @@ exports.submitApplication = async (req, res) => {
           };
           console.log("Resume uploaded to Cloudinary:", cloudinaryResult.secure_url);
           break; // Success, exit retry loop
-          
+
         } catch (uploadError) {
           uploadAttempt++;
           console.error(`Cloudinary upload attempt ${uploadAttempt} failed:`, uploadError.message);
-          
+
           if (uploadAttempt >= maxRetries) {
             console.error("All upload attempts failed");
-            return res.status(500).json({ 
-              message: "Failed to upload resume after multiple attempts", 
-              error: uploadError.message 
+            return res.status(500).json({
+              message: "Failed to upload resume after multiple attempts",
+              error: uploadError.message
             });
           }
-          
+
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 2000 * uploadAttempt));
         }
       }
     }
-    
+
     const applicationData = {
       jobId: job._id,
       fullName,
@@ -331,22 +331,22 @@ exports.submitApplication = async (req, res) => {
       // Add answers
       ...(questionAnswers && { questionAnswers }),
     };
-    
+
     const application = await new Application(applicationData).save();
     console.log("Saved:", application._id);
-    
-    try { await logAudit({ req, action: "CREATE", resourceEntity: "Application", resourceId: application._id, changes: { jobId: job._id } }); } catch(err){}
 
-    res.status(201).json({ 
-      message: "Application submitted successfully", 
-      applicationId: application._id 
+    try { await logAudit({ req, action: "CREATE", resourceEntity: "Application", resourceId: application._id, changes: { jobId: job._id } }); } catch (err) { }
+
+    res.status(201).json({
+      message: "Application submitted successfully",
+      applicationId: application._id
     });
-    
+
   } catch (error) {
     console.error("Submit application error:", error);
-    res.status(500).json({ 
-      message: "Server error", 
-      error: error.message 
+    res.status(500).json({
+      message: "Server error",
+      error: error.message
     });
   }
 };
@@ -358,13 +358,13 @@ exports.uploadQuestionFile = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-    
+
     console.log(`Uploading question file: ${req.file.originalname}`);
     console.log(`File size: ${(req.file.size / 1024 / 1024).toFixed(2)}MB`);
-    
+
     let uploadAttempt = 0;
     const maxRetries = 3;
-    
+
     while (uploadAttempt < maxRetries) {
       try {
         // Upload directly from buffer to Cloudinary using the uploadQuestionFile function
@@ -375,29 +375,29 @@ exports.uploadQuestionFile = async (req, res) => {
           req.file.originalname,
           req.file.mimetype
         );
-        
+
         console.log("Question file uploaded to Cloudinary:", cloudinaryResult.secure_url);
-        
-        res.status(200).json({ 
-          message: "File uploaded successfully", 
+
+        res.status(200).json({
+          message: "File uploaded successfully",
           fileUrl: cloudinaryResult.secure_url,
           cloudinaryPublicId: cloudinaryResult.public_id,
           originalName: req.file.originalname
         });
         return; // Success, exit function
-        
+
       } catch (uploadError) {
         uploadAttempt++;
         console.error(`Question file upload attempt ${uploadAttempt} failed:`, uploadError.message);
-        
+
         if (uploadAttempt >= maxRetries) {
           console.error("All question file upload attempts failed");
-          return res.status(500).json({ 
-            message: "Failed to upload file after multiple attempts", 
-            error: uploadError.message 
+          return res.status(500).json({
+            message: "Failed to upload file after multiple attempts",
+            error: uploadError.message
           });
         }
-        
+
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, 2000 * uploadAttempt));
       }
@@ -428,9 +428,9 @@ exports.updateApplicationAnswers = async (req, res) => {
     application.updatedAt = Date.now();
     await application.save();
 
-    res.status(200).json({ 
-      message: "Application answers updated successfully", 
-      applicationId: application._id 
+    res.status(200).json({
+      message: "Application answers updated successfully",
+      applicationId: application._id
     });
   } catch (error) {
     handleError(res, error, "updateAnswers");
@@ -444,11 +444,11 @@ exports.parseResume = async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "No resume file provided" });
 
     const fileExt = path.extname(req.file.originalname).substring(1).toLowerCase();
-    
+
     // Check format
     if (!['pdf', 'doc', 'docx'].includes(fileExt)) {
-      return res.status(400).json({ 
-        message: "Unsupported file type. Please upload PDF, DOC, or DOCX files only." 
+      return res.status(400).json({
+        message: "Unsupported file type. Please upload PDF, DOC, or DOCX files only."
       });
     }
 
@@ -456,92 +456,92 @@ exports.parseResume = async (req, res) => {
     try {
       const extractedData = await resumeParserService.parseResume(req.file.buffer, req.file.mimetype, req.file.originalname);
       console.log("Parsed OK");
-      
+
       // Check if parsing was successful
       if (!extractedData.success) {
         throw new Error(extractedData.error || 'Failed to parse resume');
       }
-        
-        // Extract the parsed data structure
-        const parsedData = extractedData.data;
-        
-        // Log the raw extracted data to help with debugging
-        console.log("Raw extracted data types:", {
-          personalInfo: typeof parsedData.personalInfo,
-          education: typeof parsedData.education,
-          experience: typeof parsedData.experience,
-          skills: typeof parsedData.skills
-        });
-        
-        // Format data for frontend
-        const formattedData = {
-          fullName: parsedData.personalInfo?.name || '',
-          email: parsedData.personalInfo?.email || '',
-          phone: parsedData.personalInfo?.phone || '',
-          skills: Array.isArray(parsedData.skills) && parsedData.skills.length > 0 
-            ? parsedData.skills.join(', ') 
-            : parsedData.skillsText || '',
-          education: Array.isArray(parsedData.education) && parsedData.education.length > 0
-            ? formatEducationArray(parsedData.education)
-            : parsedData.educationText || '',
-          experience: Array.isArray(parsedData.experience) && parsedData.experience.length > 0
-            ? formatExperienceArray(parsedData.experience)
-            : parsedData.experienceText || '',
-          address: parsedData.personalInfo?.location || '',
-          yearsOfExperience: parsedData.yearsOfExperience || 0
-        };
-        
-        // Log what was successfully extracted
-        const extractedFields = [];
-        if (formattedData.fullName) extractedFields.push('name');
-        if (formattedData.email) extractedFields.push('email');
-        if (formattedData.phone) extractedFields.push('phone');
-        if (formattedData.skills) extractedFields.push('skills');
-        if (formattedData.education) extractedFields.push('education');
-        if (formattedData.experience) extractedFields.push('experience');
-        
-        console.log("Formatted data for frontend:", {
-          extractedFields: extractedFields,
-          phone: formattedData.phone || 'Not found',
-          email: formattedData.email || 'Not found',
-          skills: typeof formattedData.skills === 'string' ? 
-            (formattedData.skills.length > 100 ? formattedData.skills.substring(0, 100) + '...' : formattedData.skills) : 
-            'Not available',
-          education: typeof formattedData.education === 'string' ? 
-            (formattedData.education.length > 100 ? formattedData.education.substring(0, 100) + '...' : formattedData.education) : 
-            'Not available',
-          experience: typeof formattedData.experience === 'string' ? 
-            (formattedData.experience.length > 100 ? formattedData.experience.substring(0, 100) + '...' : formattedData.experience) : 
-            'Not available'
-        });
-        
-        // Add metadata about what was extracted
-        formattedData.extractionSummary = {
-          fieldsExtracted: extractedFields,
-          totalFields: extractedFields.length
-        };
-        
-        res.status(200).json(formattedData);
-      } catch (parseError) {
-        console.error("Parse issue:", parseError.message);
-        console.error(parseError.stack);
-        
-        // Return empty response for parsing errors
-        res.status(200).json({ 
-          message: "Resume processed with limited success.",
-          fullName: '',
-          email: '',
-          phone: '',
-          skills: '',
-          education: '',
-          experience: ''
-        });
-      }
+
+      // Extract the parsed data structure
+      const parsedData = extractedData.data;
+
+      // Log the raw extracted data to help with debugging
+      console.log("Raw extracted data types:", {
+        personalInfo: typeof parsedData.personalInfo,
+        education: typeof parsedData.education,
+        experience: typeof parsedData.experience,
+        skills: typeof parsedData.skills
+      });
+
+      // Format data for frontend
+      const formattedData = {
+        fullName: parsedData.personalInfo?.name || '',
+        email: parsedData.personalInfo?.email || '',
+        phone: parsedData.personalInfo?.phone || '',
+        skills: Array.isArray(parsedData.skills) && parsedData.skills.length > 0
+          ? parsedData.skills.join(', ')
+          : parsedData.skillsText || '',
+        education: Array.isArray(parsedData.education) && parsedData.education.length > 0
+          ? formatEducationArray(parsedData.education)
+          : parsedData.educationText || '',
+        experience: Array.isArray(parsedData.experience) && parsedData.experience.length > 0
+          ? formatExperienceArray(parsedData.experience)
+          : parsedData.experienceText || '',
+        address: parsedData.personalInfo?.location || '',
+        yearsOfExperience: parsedData.yearsOfExperience || 0
+      };
+
+      // Log what was successfully extracted
+      const extractedFields = [];
+      if (formattedData.fullName) extractedFields.push('name');
+      if (formattedData.email) extractedFields.push('email');
+      if (formattedData.phone) extractedFields.push('phone');
+      if (formattedData.skills) extractedFields.push('skills');
+      if (formattedData.education) extractedFields.push('education');
+      if (formattedData.experience) extractedFields.push('experience');
+
+      console.log("Formatted data for frontend:", {
+        extractedFields: extractedFields,
+        phone: formattedData.phone || 'Not found',
+        email: formattedData.email || 'Not found',
+        skills: typeof formattedData.skills === 'string' ?
+          (formattedData.skills.length > 100 ? formattedData.skills.substring(0, 100) + '...' : formattedData.skills) :
+          'Not available',
+        education: typeof formattedData.education === 'string' ?
+          (formattedData.education.length > 100 ? formattedData.education.substring(0, 100) + '...' : formattedData.education) :
+          'Not available',
+        experience: typeof formattedData.experience === 'string' ?
+          (formattedData.experience.length > 100 ? formattedData.experience.substring(0, 100) + '...' : formattedData.experience) :
+          'Not available'
+      });
+
+      // Add metadata about what was extracted
+      formattedData.extractionSummary = {
+        fieldsExtracted: extractedFields,
+        totalFields: extractedFields.length
+      };
+
+      res.status(200).json(formattedData);
+    } catch (parseError) {
+      console.error("Parse issue:", parseError.message);
+      console.error(parseError.stack);
+
+      // Return empty response for parsing errors
+      res.status(200).json({
+        message: "Resume processed with limited success.",
+        fullName: '',
+        email: '',
+        phone: '',
+        skills: '',
+        education: '',
+        experience: ''
+      });
+    }
   } catch (error) {
     console.error("Error:", error);
     console.error(error.stack);
-    res.status(500).json({ 
-      message: "Failed to parse resume", 
+    res.status(500).json({
+      message: "Failed to parse resume",
       error: error.message,
       fullName: '',
       email: '',
@@ -556,120 +556,120 @@ exports.parseResume = async (req, res) => {
 // Format education data for frontend
 const formatEducation = (education) => {
   if (!education) return '';
-  
+
   // Handle string input (backward compatibility)
   if (typeof education === 'string') {
     // If it's already a string, check if it has content
     if (education.trim().length === 0) return '';
-    
+
     // Log the education string for debugging
     console.log('Education string format:', education.substring(0, 100));
     return education;
   }
-  
+
   // Handle array input
   if (Array.isArray(education)) {
     console.log('Education array format, items:', education.length);
-    
+
     if (education.length === 0) return '';
-    
+
     return education.map(edu => {
       let formattedEdu = '';
-      
+
       if (edu.degree) formattedEdu += `Degree: ${edu.degree}\n`;
       if (edu.institution) formattedEdu += `Institution: ${edu.institution}\n`;
       if (edu.year) formattedEdu += `Year: ${edu.year}\n`;
       if (edu.score) formattedEdu += `Score: ${edu.score}\n`;
-      
+
       // If we have a plain object with no recognized fields, try to extract text
       if (formattedEdu.length === 0 && typeof edu === 'object') {
         // Try to extract any text content from the object
         const values = Object.values(edu).filter(v => v && typeof v === 'string');
         formattedEdu = values.join('\n');
       }
-      
+
       // If edu is a string, use it directly
       if (typeof edu === 'string') {
         formattedEdu = edu;
       }
-      
+
       return formattedEdu;
     }).join('\n\n'); // Double newline for better separation
   }
-  
+
   return '';
 };
 
 // Format experience data for frontend
 const formatExperience = (experience) => {
   if (!experience) return '';
-  
+
   // Handle string input (backward compatibility)
   if (typeof experience === 'string') {
     // If it's already a string, check if it has content
     if (experience.trim().length === 0) return '';
-    
+
     // Log the experience string for debugging
     console.log('Experience string format:', experience.substring(0, 100));
     return experience;
   }
-  
+
   // Handle array input
   if (Array.isArray(experience)) {
     console.log('Experience array format, items:', experience.length);
-    
+
     if (experience.length === 0) return '';
-    
+
     return experience.map(exp => {
       let formattedExp = '';
-      
+
       if (exp.role) formattedExp += `Role: ${exp.role}\n`;
       if (exp.company) formattedExp += `Company: ${exp.company}\n`;
       if (exp.period) formattedExp += `Period: ${exp.period}\n`;
       if (exp.description) formattedExp += `Description: ${exp.description}\n`;
-      
+
       // If we have a plain object with no recognized fields, try to extract text
       if (formattedExp.length === 0 && typeof exp === 'object') {
         // Try to extract any text content from the object
         const values = Object.values(exp).filter(v => v && typeof v === 'string');
         formattedExp = values.join('\n');
       }
-      
+
       // If exp is a string, use it directly
       if (typeof exp === 'string') {
         formattedExp = exp;
       }
-      
+
       return formattedExp;
     }).join('\n\n'); // Double newline for better separation
   }
-  
+
   return '';
 };
 
 // Format education array for frontend
 const formatEducationArray = (education) => {
   if (!Array.isArray(education) || education.length === 0) return '';
-  
+
   return education.map(edu => {
     let formattedEdu = '';
-    
+
     if (edu.degree) formattedEdu += `Degree: ${edu.degree}\n`;
     if (edu.institution) formattedEdu += `Institution: ${edu.institution}\n`;
     if (edu.year) formattedEdu += `Year: ${edu.year}\n`;
     if (edu.gpa) formattedEdu += `GPA: ${edu.gpa}\n`;
-    
+
     // If we have a plain object with no recognized fields, try to extract text
     if (formattedEdu.length === 0 && typeof edu === 'object') {
       const values = Object.values(edu).filter(v => v && typeof v === 'string');
       formattedEdu = values.join('\n');
     }
-    
+
     // If edu is a string, use it directly
     if (typeof edu === 'string') {
       formattedEdu = edu;
     }
-    
+
     return formattedEdu.trim();
   }).filter(edu => edu.length > 0).join('\n\n');
 };
@@ -677,26 +677,26 @@ const formatEducationArray = (education) => {
 // Format experience array for frontend
 const formatExperienceArray = (experience) => {
   if (!Array.isArray(experience) || experience.length === 0) return '';
-  
+
   return experience.map(exp => {
     let formattedExp = '';
-    
+
     if (exp.title) formattedExp += `Title: ${exp.title}\n`;
     if (exp.company) formattedExp += `Company: ${exp.company}\n`;
     if (exp.duration) formattedExp += `Duration: ${exp.duration}\n`;
     if (exp.description) formattedExp += `Description: ${exp.description}\n`;
-    
+
     // If we have a plain object with no recognized fields, try to extract text
     if (formattedExp.length === 0 && typeof exp === 'object') {
       const values = Object.values(exp).filter(v => v && typeof v === 'string');
       formattedExp = values.join('\n');
     }
-    
+
     // If exp is a string, use it directly
     if (typeof exp === 'string') {
       formattedExp = exp;
     }
-    
+
     return formattedExp.trim();
   }).filter(exp => exp.length > 0).join('\n\n');
 };
@@ -764,13 +764,13 @@ exports.getAllApplications = async (req, res) => {
     const userDept = (req.user.department || '').toLowerCase();
 
     // Restriction: HR users only see assigned jobs, unless they are Admin/Super-Admin
-    if ((userRole === 'hr' || userDept === 'hr' || userDept === 'human resources') && 
-        userRole !== 'admin' && userRole !== 'super-admin') {
-      
-      const assignedJobIds = Array.isArray(req.user.assignedJobs) 
-        ? req.user.assignedJobs.map(id => id.toString()) 
+    if ((userRole === 'hr' || userDept === 'hr' || userDept === 'human resources') &&
+      userRole !== 'admin' && userRole !== 'super-admin') {
+
+      const assignedJobIds = Array.isArray(req.user.assignedJobs)
+        ? req.user.assignedJobs.map(id => id.toString())
         : [];
-      
+
       query = { jobId: { $in: assignedJobIds } };
     }
 
@@ -798,7 +798,7 @@ exports.getJobApplications = async (req, res) => {
       .populate("jobId", "title slug company location salary type description requirements questions")
       .sort({ createdAt: -1 })
       .lean();
-    
+
     console.log(`Found: ${applications.length}`);
     res.status(200).json(applications);
   } catch (error) {
@@ -814,7 +814,7 @@ exports.getApplicationDetail = async (req, res) => {
       { path: "jobId", select: "title slug company location salary type description requirements questions" },
       { path: "offerLetterId" }
     ]);
-    
+
     if (!application) {
       console.log(`Not found: ${req.params.id}`);
       return res.status(404).json({ message: "Application not found" });
@@ -830,7 +830,7 @@ exports.getApplicationDetail = async (req, res) => {
         return res.status(403).json({ message: "Access denied. You are not assigned to this job." });
       }
     }
-    
+
     console.log(`Found: ${req.params.id}`);
     res.status(200).json(application);
   } catch (error) {
@@ -857,9 +857,9 @@ exports.getResumeAccessUrl = async (req, res) => {
     }
 
     const isAdmin = requestUser.role === 'admin' || requestUser.role === 'super-admin';
-    const isHR = requestUser.role?.toLowerCase() === 'hr' || 
-                 requestUser.department?.toLowerCase() === 'hr' ||
-                 requestUser.department?.toLowerCase() === 'human resources';
+    const isHR = requestUser.role?.toLowerCase() === 'hr' ||
+      requestUser.department?.toLowerCase() === 'hr' ||
+      requestUser.department?.toLowerCase() === 'human resources';
     const isOwner = application.userId && application.userId.toString() === req.user.userId;
 
     if (!isAdmin && !isOwner) {
@@ -892,19 +892,19 @@ const generateEmployeeId = async () => {
   const prefix = "EMP";
   let isUnique = false;
   let employeeId;
-  
+
   while (!isUnique) {
     // Generate random 4-digit number
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     employeeId = `${prefix}${randomNum}`;
-    
+
     // Check if this ID already exists
     const existingUser = await User.findOne({ employeeId });
     if (!existingUser) {
       isUnique = true;
     }
   }
-  
+
   return employeeId;
 };
 
@@ -925,9 +925,9 @@ exports.updateApplicationStatus = async (req, res) => {
     if (application.userId) {
       const user = application.userId;
       let newStatus = user.status; // Default to current status
-      
+
       // Map application status to user status
-      switch(status) {
+      switch (status) {
         case "hired":
           newStatus = "active";
           break;
@@ -943,47 +943,47 @@ exports.updateApplicationStatus = async (req, res) => {
           // Keep current status
           break;
       }
-      
+
       // Only update if the status is changing
       if (user.status !== newStatus) {
         const updateData = {
           status: newStatus
         };
-        
+
         // Generate and assign employee ID if user is becoming an employee and doesn't have an ID
         if (newStatus === "active" && application.status === "hired") {
           if (!user.employeeId) {
             updateData.employeeId = await generateEmployeeId();
             console.log(`Generated employee ID: ${updateData.employeeId} for user: ${user.name}`);
           }
-          
+
           // Auto-populate employee record
           const Job = require('../models/job');
           const OfferLetter = require('../models/offerLetter');
-          
+
           const offer = await OfferLetter.findOne({ applicationId: application._id }).sort({ createdAt: -1 });
           if (offer) {
-             updateData.position = offer.position;
-             updateData.department = offer.department;
-             updateData.reportingManager = offer.reportingManager;
+            updateData.position = offer.position;
+            updateData.department = offer.department;
+            updateData.reportingManager = offer.reportingManager;
           } else if (application.jobId) {
-             const job = await Job.findById(application.jobId);
-             if (job) {
-               updateData.position = job.title || job.position;
-               updateData.department = job.department;
-               updateData.reportingManager = job.reportingManager;
-             }
+            const job = await Job.findById(application.jobId);
+            if (job) {
+              updateData.position = job.title || job.position;
+              updateData.department = job.department;
+              updateData.reportingManager = job.reportingManager;
+            }
           }
         }
-        
+
         const oldUser = await User.findById(user._id);
         const updatedUser = await User.findByIdAndUpdate(user._id, updateData, { new: true });
-        try { await logAudit({ req, action: "STATUS_CHANGE", resourceEntity: "User", resourceId: user._id, changes: { oldStatus: oldUser.status, newStatus: updatedUser.status } }); } catch(err){}
+        try { await logAudit({ req, action: "STATUS_CHANGE", resourceEntity: "User", resourceId: user._id, changes: { oldStatus: oldUser.status, newStatus: updatedUser.status } }); } catch (err) { }
         console.log(`Updated user ${user.name} from ${user.status} to ${newStatus} status${updateData.employeeId ? ` with ID: ${updateData.employeeId}` : ''}`);
       }
     }
 
-    try { await logAudit({ req, action: "STATUS_CHANGE", resourceEntity: "Application", resourceId: application._id, changes: { oldStatus: existingApplication.status, newStatus: application.status } }); } catch(err){}
+    try { await logAudit({ req, action: "STATUS_CHANGE", resourceEntity: "Application", resourceId: application._id, changes: { oldStatus: existingApplication.status, newStatus: application.status } }); } catch (err) { }
 
     res.status(200).json({ message: "Application status updated successfully", application });
   } catch (error) {
@@ -996,20 +996,20 @@ exports.generateOfferLetter = async (req, res) => {
   console.log("Gen: offer", req.params.applicationId);
   try {
     const { applicationId } = req.params;
-    const { 
-      offerDetails, 
-      position, 
-      department, 
-      salary, 
-      startDate, 
-      joiningLocation, 
-      workType, 
-      benefits, 
-      reportingManager, 
-      hrContactName, 
-      hrContactEmail, 
-      hrContactPhone, 
-      validUntil, 
+    const {
+      offerDetails,
+      position,
+      department,
+      salary,
+      startDate,
+      joiningLocation,
+      workType,
+      benefits,
+      reportingManager,
+      hrContactName,
+      hrContactEmail,
+      hrContactPhone,
+      validUntil,
       additionalNotes,
       offerType,
       payoutFrequency
@@ -1060,7 +1060,7 @@ exports.generateOfferLetter = async (req, res) => {
     // Update user status to active if user exists
     if (application.userId) {
       const user = application.userId;
-      
+
       // Only update if user is not already active
       if (user.status !== "active") {
         await User.findByIdAndUpdate(user._id, { status: "active" });
@@ -1069,7 +1069,7 @@ exports.generateOfferLetter = async (req, res) => {
     }
 
     console.log(`Offer letter created and linked to application ${application._id}`);
-    res.status(200).json({ 
+    res.status(200).json({
       message: "Offer letter generated and stored successfully",
       offerLetterId: savedOfferLetter._id
     });
@@ -1110,11 +1110,11 @@ exports.getMyApplicationOfferLetter = async (req, res) => {
     }
 
     // Find the application and verify it belongs to the current user
-    const application = await Application.findOne({ 
+    const application = await Application.findOne({
       _id: targetApplication._id,
-      userId: userId 
+      userId: userId
     }).populate('offerLetterId');
-    
+
     if (!application) {
       return res.status(404).json({ message: "Application not found or you don't have permission to access it" });
     }
@@ -1150,37 +1150,37 @@ exports.sendWelcomeEmail = async (req, res) => {
     // Update user employeeStatus based on application status if user exists
     if (application.userId) {
       const user = application.userId;
-      
+
       // Only update if user is not already active
       if (user.status !== "active") {
         const updateData = {
           status: "active"
         };
-        
+
         // Generate and assign employee ID if user doesn't have one
         if (!user.employeeId) {
           updateData.employeeId = await generateEmployeeId();
           console.log(`Generated employee ID: ${updateData.employeeId} for user: ${user.name}`);
         }
-        
+
         // Auto-populate employee record
         const Job = require('../models/job');
         const OfferLetter = require('../models/offerLetter');
-        
+
         const offer = await OfferLetter.findOne({ applicationId: application._id }).sort({ createdAt: -1 });
         if (offer) {
-            updateData.position = offer.position;
-            updateData.department = offer.department;
-            updateData.reportingManager = offer.reportingManager;
+          updateData.position = offer.position;
+          updateData.department = offer.department;
+          updateData.reportingManager = offer.reportingManager;
         } else if (application.jobId) {
-            const job = await Job.findById(application.jobId);
-            if (job) {
-              updateData.position = job.title || job.position;
-              updateData.department = job.department;
-              updateData.reportingManager = job.reportingManager;
-            }
+          const job = await Job.findById(application.jobId);
+          if (job) {
+            updateData.position = job.title || job.position;
+            updateData.department = job.department;
+            updateData.reportingManager = job.reportingManager;
+          }
         }
-        
+
         await User.findByIdAndUpdate(user._id, updateData);
         console.log(`Updated user ${user.name} from ${user.status} to active status${updateData.employeeId ? ` with ID: ${updateData.employeeId}` : ''}`);
       }
@@ -1215,8 +1215,8 @@ exports.rejectApplication = async (req, res) => {
     // Note: We don't downgrade status if the user is already active or former
     // This is handled in the updateApplicationStatus method
 
-    try { await logAudit({ req, action: "REJECT", resourceEntity: "Application", resourceId: application._id, changes: { reason: rejectionReason } }); } catch(err){}
-    
+    try { await logAudit({ req, action: "REJECT", resourceEntity: "Application", resourceId: application._id, changes: { reason: rejectionReason } }); } catch (err) { }
+
     res.status(200).json({ message: "Rejection email sent" });
   } catch (error) {
     handleError(res, error, "sendReject");
@@ -1228,17 +1228,17 @@ exports.getApplicationsForRecommendation = async (req, res) => {
   console.log("Get: apps for recommendation");
   try {
     const currentUserId = req.user.userId || req.user._id; // Fixed: use userId instead of id
-    
+
     // Find applications that don't have recommendations yet and are not submitted by the current user
     const applications = await Application.find({
       status: { $in: ['pending', 'under_review'] }, // Only pending/under review applications
       recommendationId: { $exists: false }, // No existing recommendation
       userId: { $ne: currentUserId } // Exclude applications submitted by the current user
     })
-    .populate("jobId", "title company location department")
-    .select("_id fullName email jobId status createdAt userId")
-    .sort({ createdAt: -1 });
-    
+      .populate("jobId", "title company location department")
+      .select("_id fullName email jobId status createdAt userId")
+      .sort({ createdAt: -1 });
+
     console.log(`Found ${applications.length} applications available for recommendation (excluding own applications)`);
     res.status(200).json({
       success: true,
@@ -1265,14 +1265,14 @@ exports.parseResume = async (req, res) => {
 
     if (!parseResult.success) {
       console.error("Resume parsing failed:", parseResult.error);
-      return res.status(500).json({ 
-        message: "Failed to parse resume", 
-        error: parseResult.error 
+      return res.status(500).json({
+        message: "Failed to parse resume",
+        error: parseResult.error
       });
     }
 
     console.log("Resume parsed successfully");
-    
+
     // Return the parsed data with the correct structure
     res.status(200).json({
       message: "Resume parsed successfully",
@@ -1296,10 +1296,10 @@ exports.parseResume = async (req, res) => {
 
   } catch (error) {
     console.error("Error in parseResume:", error);
-    
-    res.status(500).json({ 
-      message: "Server error during resume parsing", 
-      error: error.message 
+
+    res.status(500).json({
+      message: "Server error during resume parsing",
+      error: error.message
     });
   }
 };
@@ -1380,13 +1380,13 @@ exports.checkApplicationStatus = async (req, res) => {
         message: 'Job not found'
       });
     }
-    
+
     const existingApplication = await Application.findOne({
       userId: userId,
       jobId: job._id,
       status: { $ne: 'rejected' }
     });
-    
+
     if (existingApplication) {
       return res.status(200).json({
         hasApplied: true,
@@ -1460,7 +1460,7 @@ exports.getDashboardStats = async (req, res) => {
       const now = new Date();
       let startDate = new Date();
       if (dateRange === 'today') {
-        startDate.setHours(0,0,0,0);
+        startDate.setHours(0, 0, 0, 0);
       } else if (dateRange === 'week') {
         startDate.setDate(now.getDate() - 7);
       } else if (dateRange === 'month') {
@@ -1511,7 +1511,7 @@ exports.getDashboardStats = async (req, res) => {
       }
     });
 
-    const conversionRate = totalApplications > 0 
+    const conversionRate = totalApplications > 0
       ? (((statusCounts.offered || 0) + (statusCounts.hired || 0)) / totalApplications * 100).toFixed(1)
       : 0;
 

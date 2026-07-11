@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { hrService, userService } from '../../services/api';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUserShield, FaUsers, FaLock, FaCheck, FaTimes, 
+import {
+  FaUserShield, FaUsers, FaLock, FaCheck, FaTimes,
   FaBriefcase, FaCertificate, FaFileInvoice, FaClipboardList,
   FaSearch, FaHistory, FaUserPlus, FaChevronRight, FaInfoCircle,
   FaChartLine
@@ -20,7 +21,7 @@ const ManageHR = () => {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedHR, setSelectedHR] = useState(null);
-  
+
   // Search state for promoting users
   const [searchUserQuery, setSearchUserQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -136,7 +137,7 @@ const ManageHR = () => {
     if (!window.confirm(`Are you sure you want to revoke HR access from ${name}? Their department will be reset.`)) {
       return;
     }
-    
+
     try {
       await hrService.revokeHR(hrId);
       toast.success(`HR access revoked from ${name}`);
@@ -158,11 +159,10 @@ const ManageHR = () => {
   };
 
   const PermissionBadge = ({ enabled, label, icon: Icon }) => (
-    <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium border ${
-      enabled 
-        ? 'bg-lime-900/30 text-lime-400 border-lime-700/50' 
+    <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium border ${enabled
+        ? 'bg-lime-900/30 text-lime-400 border-lime-700/50'
         : 'bg-gray-800 text-gray-500 border-gray-700'
-    }`}>
+      }`}>
       <Icon className="w-3 h-3" />
       <span>{label}</span>
     </div>
@@ -203,21 +203,19 @@ const ManageHR = () => {
         <div className="flex space-x-1 bg-gray-900 p-1 rounded-xl mb-8 w-fit border border-gray-800">
           <button
             onClick={() => setActiveTab('list')}
-            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'list' 
-                ? 'bg-gray-800 text-white shadow-sm border border-gray-700' 
+            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'list'
+                ? 'bg-gray-800 text-white shadow-sm border border-gray-700'
                 : 'text-gray-400 hover:text-white'
-            }`}
+              }`}
           >
             <FaUsers className="mr-2" /> HR Directory
           </button>
           <button
             onClick={() => setActiveTab('logs')}
-            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'logs' 
-                ? 'bg-gray-800 text-white shadow-sm border border-gray-700' 
+            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'logs'
+                ? 'bg-gray-800 text-white shadow-sm border border-gray-700'
                 : 'text-gray-400 hover:text-white'
-            }`}
+              }`}
           >
             <FaHistory className="mr-2" /> Audit Logs
           </button>
@@ -253,15 +251,15 @@ const ManageHR = () => {
                     </div>
 
                     <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 px-4">
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canGenerateCertificate} 
-                        label="Certificates" 
-                        icon={FaCertificate} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canGenerateCertificate}
+                        label="Certificates"
+                        icon={FaCertificate}
                       />
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canGenerateOfferLetter} 
-                        label="Offer Letters" 
-                        icon={FaFileInvoice} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canGenerateOfferLetter}
+                        label="Offer Letters"
+                        icon={FaFileInvoice}
                       />
                       <PermissionBadge
                         enabled={hr.permissions?.canCreateJob}
@@ -273,30 +271,30 @@ const ManageHR = () => {
                         label="Manage Jobs"
                         icon={FaBriefcase}
                       />
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canViewApplicants} 
-                        label="Applicants" 
-                        icon={FaClipboardList} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canViewApplicants}
+                        label="Applicants"
+                        icon={FaClipboardList}
                       />
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canManageReviews} 
-                        label="Reviews" 
-                        icon={FaCheck} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canManageReviews}
+                        label="Reviews"
+                        icon={FaCheck}
                       />
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canManageEmployees} 
-                        label="Employees" 
-                        icon={FaUsers} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canManageEmployees}
+                        label="Employees"
+                        icon={FaUsers}
                       />
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canManageRecommendations} 
-                        label="Recommendations" 
-                        icon={FaUsers} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canManageRecommendations}
+                        label="Recommendations"
+                        icon={FaUsers}
                       />
-                      <PermissionBadge 
-                        enabled={hr.permissions?.canAccessDashboard} 
-                        label="Dashboard" 
-                        icon={FaChartLine} 
+                      <PermissionBadge
+                        enabled={hr.permissions?.canAccessDashboard}
+                        label="Dashboard"
+                        icon={FaChartLine}
                       />
                     </div>
 
@@ -351,9 +349,8 @@ const ManageHR = () => {
                         {log.hrId?.name || 'Unknown HR'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                          log.action === 'PROMOTE' ? 'bg-blue-900/40 text-blue-400' : 'bg-amber-900/40 text-amber-400'
-                        }`}>
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${log.action === 'PROMOTE' ? 'bg-blue-900/40 text-blue-400' : 'bg-amber-900/40 text-amber-400'
+                          }`}>
                           {log.action}
                         </span>
                       </td>
@@ -386,7 +383,7 @@ const ManageHR = () => {
                     <FaTimes size={24} />
                   </button>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="relative">
                     <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -471,22 +468,20 @@ const ManageHR = () => {
                           { id: 'canManageRecommendations', label: 'Recommendation Management', desc: 'Allows HR to manage candidate recommendations.' },
                           { id: 'canAccessDashboard', label: 'Dashboard Access', desc: 'Allows access to the main HR analytics dashboard.' }
                         ].map(perm => (
-                          <div 
-                            key={perm.id} 
+                          <div
+                            key={perm.id}
                             onClick={() => handleTogglePermission(perm.id)}
-                            className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                              configForm.permissions[perm.id] 
-                                ? 'bg-lime-500/10 border-lime-500/50 shadow-[0_0_15px_rgba(132,204,22,0.1)]' 
+                            className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${configForm.permissions[perm.id]
+                                ? 'bg-lime-500/10 border-lime-500/50 shadow-[0_0_15px_rgba(132,204,22,0.1)]'
                                 : 'bg-gray-800/30 border-gray-800 hover:border-gray-700'
-                            }`}
+                              }`}
                           >
                             <div className="flex justify-between items-center mb-1">
                               <span className={`font-bold ${configForm.permissions[perm.id] ? 'text-lime-400' : 'text-gray-300'}`}>
                                 {perm.label}
                               </span>
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${
-                                configForm.permissions[perm.id] ? 'bg-lime-500 border-lime-500 text-black' : 'border-gray-600'
-                              }`}>
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${configForm.permissions[perm.id] ? 'bg-lime-500 border-lime-500 text-black' : 'border-gray-600'
+                                }`}>
                                 {configForm.permissions[perm.id] && <FaCheck size={12} />}
                               </div>
                             </div>
@@ -503,24 +498,22 @@ const ManageHR = () => {
                       </h3>
                       <div className="bg-gray-800/30 rounded-2xl border border-gray-800 p-2 max-h-[480px] overflow-y-auto">
                         {availableJobs.map(job => (
-                          <div 
+                          <div
                             key={job._id}
                             onClick={() => handleToggleJob(job._id)}
-                            className={`p-4 m-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                              configForm.assignedJobs.includes(job._id)
+                            className={`p-4 m-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${configForm.assignedJobs.includes(job._id)
                                 ? 'bg-gray-700/50'
                                 : 'hover:bg-gray-800'
-                            }`}
+                              }`}
                           >
                             <div>
                               <p className="font-bold text-sm">{job.title}</p>
                               <p className="text-[10px] text-gray-500 uppercase tracking-wider">{job.company} • {job.location}</p>
                             </div>
-                            <div className={`w-5 h-5 rounded border ${
-                              configForm.assignedJobs.includes(job._id) 
-                                ? 'bg-blue-500 border-blue-500 flex items-center justify-center text-white' 
+                            <div className={`w-5 h-5 rounded border ${configForm.assignedJobs.includes(job._id)
+                                ? 'bg-blue-500 border-blue-500 flex items-center justify-center text-white'
                                 : 'border-gray-600'
-                            }`}>
+                              }`}>
                               {configForm.assignedJobs.includes(job._id) && <FaCheck size={10} />}
                             </div>
                           </div>

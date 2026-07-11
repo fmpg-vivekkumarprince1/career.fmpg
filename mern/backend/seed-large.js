@@ -25,8 +25,8 @@ const COUNTS = {
 
 const departments = ['IT', 'Development', 'Design', 'Operations', 'Data Science', 'Marketing', 'Sales', 'HR'];
 const positions = [
-  'Senior Developer', 'Junior Developer', 'Frontend Developer', 'Backend Developer', 
-  'Full Stack Developer', 'UI/UX Designer', 'DevOps Engineer', 'Data Scientist', 
+  'Senior Developer', 'Junior Developer', 'Frontend Developer', 'Backend Developer',
+  'Full Stack Developer', 'UI/UX Designer', 'DevOps Engineer', 'Data Scientist',
   'Project Manager', 'Product Manager', 'HR Manager', 'Software Engineer Intern'
 ];
 const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
@@ -75,7 +75,7 @@ const seedDatabase = async () => {
       empCounter++;
       return id;
     };
-    
+
     // Always include the main admin
     const mainAdminEmail = 'contact@gmail.com';
     usedEmails.add(mainAdminEmail);
@@ -182,7 +182,7 @@ const seedDatabase = async () => {
       const job = faker.helpers.arrayElement(createdJobs);
       const user = faker.helpers.arrayElement(regularUsers);
       const status = faker.helpers.arrayElement(['pending', 'reviewing', 'shortlisted', 'offered', 'rejected', 'hired']);
-      
+
       applicationsData.push({
         jobId: job._id,
         userId: user._id,

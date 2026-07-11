@@ -5,8 +5,8 @@ const Job = require("../models/job");
 // Get all users in HR department or with legacy HR role
 exports.getAllHRs = async (req, res) => {
   try {
-    const hrs = await User.find({ 
-      $or: [{ department: "HR" }, { role: "hr" }] 
+    const hrs = await User.find({
+      $or: [{ department: "HR" }, { role: "hr" }]
     }).select("-password");
     res.json(hrs);
   } catch (error) {
@@ -177,10 +177,10 @@ exports.getAuditLogs = async (req, res) => {
 
 // Get all available jobs for assignment
 exports.getAvailableJobs = async (req, res) => {
-    try {
-        const jobs = await Job.find({ isActive: true }).select("title company _id");
-        res.json(jobs);
-    } catch (error) {
-        res.status(500).json({ message: "Error fetching jobs", error: error.message });
-    }
+  try {
+    const jobs = await Job.find({ isActive: true }).select("title company _id");
+    res.json(jobs);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching jobs", error: error.message });
+  }
 };
