@@ -18,6 +18,7 @@ const notificationRoutes = require("../Routes/notificationRoutes");
 const hrRoutes = require("../Routes/hrRoutes");
 const auditRoutes = require("../Routes/auditRoutes");
 const sitemapRoutes = require("../Routes/sitemapRoutes");
+const hrmsRoutes = require("../Routes/hrmsRoutes");
 
 logger.info("Starting API server...");
 
@@ -153,6 +154,20 @@ app.use("/api/contracts", contractRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/hr", hrRoutes);
 app.use("/api/audit", auditRoutes);
+app.use("/api/employees", hrmsRoutes.employees);
+app.use("/api/departments", hrmsRoutes.departments);
+app.use("/api/designations", hrmsRoutes.designations);
+app.use("/api/interviews", hrmsRoutes.interviews);
+app.use("/api/attendance", hrmsRoutes.attendance);
+app.use("/api/leaves", hrmsRoutes.leaves);
+app.use("/api/payroll", hrmsRoutes.payroll);
+app.use("/api/payslips", hrmsRoutes.payslips);
+app.use("/api/documents", hrmsRoutes.documents);
+app.use("/api/resignations", hrmsRoutes.resignations);
+app.use("/api/terminations", hrmsRoutes.terminations);
+app.use("/api/exits", hrmsRoutes.exits);
+app.use("/api/assets", hrmsRoutes.assets);
+app.use("/api/verify", hrmsRoutes.verify);
 
 // Sitemap Route (accessible at /api/sitemap.xml)
 app.use("/api", sitemapRoutes);

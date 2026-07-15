@@ -551,6 +551,20 @@ export const userService = {
   bulkUploadEmployees: (formData) => apiFileUpload.post('/api/users/bulk-upload', formData)
 };
 
+// HRMS services. Sensitive data endpoints are permission-protected by the API.
+export const hrmsService = {
+  employees: (params = {}) => api.get(`/api/employees?${new URLSearchParams(params)}`),
+  myProfile: () => api.get('/api/employees/me'),
+  attendance: (params = {}) => api.get(`/api/attendance?${new URLSearchParams(params)}`), myAttendance: () => api.get('/api/attendance/me'),
+  checkIn: () => api.post('/api/attendance/check-in'), checkOut: () => api.post('/api/attendance/check-out'),
+  leaveTypes: () => api.get('/api/leaves/types'), leaveRequests: () => api.get('/api/leaves'), myLeaveRequests: () => api.get('/api/leaves/me'), applyLeave: data => api.post('/api/leaves/requests', data),
+  payrollRuns: () => api.get('/api/payroll'), createPayrollRun: data => api.post('/api/payroll', data), calculatePayroll: id => api.post(`/api/payroll/${id}/calculate`),
+  payslips: () => api.get('/api/payslips/me'), documents: () => api.get('/api/documents'), myDocuments: () => api.get('/api/documents/me'),
+  resign: data => api.post('/api/resignations', data), myResignation: () => api.get('/api/resignations/me'), resignations: () => api.get('/api/resignations'), terminations: () => api.get('/api/terminations'),
+  exits: () => api.get('/api/exits'), assets: () => api.get('/api/assets'), verifyDocument: code => api.get(`/api/verify/${code}`),
+  interviews: () => api.get('/api/interviews'), scheduleInterview: data => api.post('/api/interviews', data)
+};
+
 // HR management service (Super Admin only)
 export const hrService = {
   getAllHRs: () => api.get('/api/hr'),

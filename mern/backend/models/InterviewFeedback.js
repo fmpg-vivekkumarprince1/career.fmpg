@@ -1,0 +1,2 @@
+const mongoose = require('mongoose');
+module.exports = mongoose.model('InterviewFeedback', new mongoose.Schema({ interviewId: { type: mongoose.Schema.Types.ObjectId, ref: 'Interview', required: true, index: true }, interviewerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, rating: { type: Number, min: 1, max: 5, required: true }, strengths: String, weaknesses: String, notes: String, recommendation: { type: String, enum: ['strong_hire', 'hire', 'hold', 'reject'], required: true } }, { timestamps: true }));

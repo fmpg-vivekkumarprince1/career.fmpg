@@ -38,6 +38,8 @@ const OfferAcceptance = lazy(() => import('./pages/OfferAcceptance'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ManageHR = lazy(() => import('./pages/admin/ManageHR'));
 const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const HrmsWorkspace = lazy(() => import('./pages/HrmsWorkspace'));
+const VerifyDocument = lazy(() => import('./pages/VerifyDocument'));
 
 import './index.css';
 
@@ -149,6 +151,7 @@ const AppContent = () => {
             {/* Public certificate verification routes */}
             <Route path="/verify" element={<VerifyCertificate />} />
             <Route path="/verify/:id" element={<VerifyCertificate />} />
+            <Route path="/verify-document/:verificationCode" element={<VerifyDocument />} />
 
             {/* Public offer letter verification routes */}
             <Route path="/verify-offer" element={<VerifyOfferLetter />} />
@@ -222,6 +225,10 @@ const AppContent = () => {
                 </EmployeeRoute>
               }
             />
+            {['attendance', 'leaves', 'payslips', 'documents'].map(kind => <Route key={kind} path={`/employee/${kind}`} element={<EmployeeRoute><HrmsWorkspace kind={kind} /></EmployeeRoute>} />)}
+            <Route path="/employee/resignation" element={<EmployeeRoute><HrmsWorkspace kind="my-resignation" /></EmployeeRoute>} />
+            {['payroll', 'attendance', 'leaves', 'documents', 'resignations', 'terminations', 'exits', 'assets'].map(kind => <Route key={kind} path={`/admin/${kind}`} element={<AdminRoute><HrmsWorkspace kind={['attendance', 'documents', 'leaves'].includes(kind) ? `admin-${kind}` : kind} /></AdminRoute>} />)}
+            <Route path="/admin/payroll/:runId" element={<AdminRoute><HrmsWorkspace kind="payroll" /></AdminRoute>} />
 
             {/* Public offer acceptance route */}
             <Route path="/offer/accept/:jobSlug/:slug" element={<OfferAcceptance />} />

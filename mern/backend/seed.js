@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { faker } = require('@faker-js/faker');
+
 const User = require('./models/user');
 const Job = require('./models/job');
 const Application = require('./models/application');
@@ -7,560 +9,822 @@ const Certificate = require('./models/certificate');
 const OfferLetter = require('./models/offerLetter');
 const Review = require('./models/review');
 const Notification = require('./models/notification');
-// const Recommendation = require('./models/recommendation');
 const connectDB = require('./config/database');
+
 require('dotenv').config();
 
-// Sample data
-const users = [
-  {
-    name: 'Admin User',
-    email: 'contact@gmail.com',
-    password: 'Prince1@',
-    role: 'admin',
-    status: 'active',
-    role: "super-admin",
-    department: 'IT',
-    position: 'IT Manager',
-    employeeId: 'EMP001'
-  },
-  {
-    name: 'Regular User',
-    email: 'user@example.com',
-    password: 'user123',
-    role: 'user',
-    status: 'active'
-  },
-  {
-    name: 'John Doe',
-    email: 'john@example.com',
-    password: 'john123',
-    role: 'user',
-    status: 'active',
-    department: 'Development',
-    position: 'Senior Developer',
-    employeeId: 'EMP002'
-  },
-  {
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    password: 'jane123',
-    role: 'user',
-    status: 'active',
-    department: 'Development',
-    position: 'Backend Developer'
-  },
-  {
-    name: 'Emily Davis',
-    email: 'emily@example.com',
-    password: 'emily123',
-    role: 'user',
-    status: 'former',
-    department: 'Development',
-    position: 'Frontend Developer Intern'
-  }
+// ======================================================
+// CONFIGURATION
+// ======================================================
+
+const COUNTS = {
+  admin: 5,
+  hr: 15,
+  user: 80,
+  jobs: 50,
+  applications: 500,
+  reviews: 100,
+  certificates: 50,
+  offerLetters: 50
+};
+
+const departments = [
+  'IT',
+  'Development',
+  'Design',
+  'Operations',
+  'Data Science',
+  'Marketing',
+  'Sales',
+  'HR'
 ];
 
-const jobs = [
-  {
-    title: 'Frontend Developer',
-    company: 'FMPG',
-    description: 'We are looking for a skilled Frontend Developer to join our team. The ideal candidate should have experience with modern JavaScript frameworks and responsive design.',
-    requirements: [
-      'Proficient in HTML, CSS, and JavaScript',
-      'Experience with React, Vue, or Angular',
-      'Understanding of responsive design principles',
-      'Knowledge of version control systems like Git'
-    ],
-    responsibilities: [
-      'Develop user-facing features using modern frontend technologies',
-      'Optimize applications for maximum speed and scalability',
-      'Collaborate with backend developers and designers',
-      'Ensure cross-browser compatibility and responsive design'
-    ],
-    location: 'Remote',
-    type: 'Full-time',
-    salary: '₹70,000 - ₹90,000',
-    department: 'Development',
-    position: 'Frontend Developer',
-    questions: [
-      {
-        questionText: 'What is your experience with React?',
-        questionType: 'text',
-        required: true,
-        order: 0
-      },
-      {
-        questionText: 'Rate your CSS skills',
-        questionType: 'rating',
-        required: true,
-        maxRating: 5,
-        order: 1
-      },
-      {
-        questionText: 'Which frontend frameworks have you worked with?',
-        questionType: 'checkbox',
-        required: false,
-        options: ['React', 'Vue', 'Angular', 'Svelte'],
-        order: 2
-      }
-    ],
-    isActive: true,
-    isPublished: true
-  },
-  {
-    title: 'Backend Developer',
-    company: 'FMPG',
-    description: 'We are seeking a Backend Developer to design and implement server-side applications. The ideal candidate should have strong knowledge of backend technologies and databases.',
-    requirements: [
-      'Proficient in Node.js, Python, or Java',
-      'Experience with database design and management',
-      'Knowledge of RESTful API design',
-      'Understanding of server security concerns'
-    ],
-    responsibilities: [
-      'Design and implement server-side applications',
-      'Develop and maintain databases',
-      'Ensure high performance and responsiveness to requests',
-      'Collaborate with backend developers'
-    ],
-    location: 'New Delhi, India',
-    type: 'Full-time',
-    salary: '₹80,000 - ₹100,000',
-    department: 'Development',
-    position: 'Backend Developer',
-    questions: [
-      {
-        questionText: 'What backend frameworks have you worked with?',
-        questionType: 'text',
-        required: true,
-        order: 0
-      },
-      {
-        questionText: 'Rate your database skills',
-        questionType: 'rating',
-        required: true,
-        maxRating: 5,
-        order: 1
-      }
-    ],
-    isActive: true,
-    isPublished: true
-  },
-  {
-    title: 'UI/UX Designer',
-    company: 'FMPG',
-    description: 'We are looking for a UI/UX Designer to create amazing user experiences. The ideal candidate should have a strong portfolio demonstrating their design skills.',
-    requirements: [
-      'Proficient in design tools like Figma, Sketch, or Adobe XD',
-      'Understanding of user-centered design principles',
-      'Experience with wireframing and prototyping',
-      'Knowledge of accessibility standards'
-    ],
-    responsibilities: [
-      'Create user-centered designs by understanding business requirements',
-      'Develop wireframes, prototypes, and mockups',
-      'Collaborate with developers to implement designs',
-      'Conduct user research and testing'
-    ],
-    location: 'Bangalore, India',
-    type: 'Full-time',
-    salary: '₹65,000 - ₹85,000',
-    department: 'Design',
-    position: 'UI/UX Designer',
-    questions: [
-      {
-        questionText: 'Please share a link to your portfolio',
-        questionType: 'text',
-        required: true,
-        order: 0
-      },
-      {
-        questionText: 'Which design tools do you use?',
-        questionType: 'multipleChoice',
-        required: true,
-        options: ['Figma', 'Sketch', 'Adobe XD', 'Other'],
-        order: 1
-      }
-    ],
-    isActive: true,
-    isPublished: true
-  },
-  {
-    title: 'DevOps Engineer',
-    company: 'FMPG',
-    description: 'We are seeking a DevOps Engineer to help us automate and optimize our development and deployment processes.',
-    requirements: [
-      'Experience with CI/CD pipelines',
-      'Knowledge of containerization (Docker, Kubernetes)',
-      'Understanding of cloud platforms (AWS, Azure, GCP)',
-      'Scripting skills (Bash, Python)'
-    ],
-    responsibilities: [
-      'Implement and maintain CI/CD pipelines',
-      'Manage cloud infrastructure',
-      'Automate deployment processes',
-      'Monitor system performance and troubleshoot issues'
-    ],
-    location: 'Remote',
-    type: 'Contract',
-    salary: '₹90,000 - ₹110,000',
-    department: 'Operations',
-    position: 'DevOps Engineer',
-    isActive: true,
-    isPublished: true
-  },
-  {
-    title: 'Data Science Intern',
-    company: 'FMPG',
-    description: 'Join our data science team as an intern to gain hands-on experience with machine learning and data analysis.',
-    requirements: [
-      'Basic knowledge of Python and statistics',
-      'Familiarity with data analysis libraries',
-      'Understanding of machine learning concepts',
-      'Strong analytical and problem-solving skills'
-    ],
-    responsibilities: [
-      'Assist in data collection and preprocessing',
-      'Support machine learning model development',
-      'Create data visualizations and reports',
-      'Learn from senior data scientists'
-    ],
-    location: 'Hybrid',
-    type: 'Internship',
-    salary: '₹1,500 - ₹2,000',
-    department: 'Data Science',
-    position: 'Data Science Intern',
-    questions: [
-      {
-        questionText: 'What programming languages are you familiar with?',
-        questionType: 'checkbox',
-        required: true,
-        options: ['Python', 'R', 'SQL', 'Java', 'JavaScript'],
-        order: 0
-      },
-      {
-        questionText: 'Rate your statistics knowledge',
-        questionType: 'rating',
-        required: true,
-        maxRating: 5,
-        order: 1
-      }
-    ],
-    isActive: true,
-    isPublished: true
-  }
+const positions = [
+  'Senior Developer',
+  'Junior Developer',
+  'Frontend Developer',
+  'Backend Developer',
+  'Full Stack Developer',
+  'UI/UX Designer',
+  'DevOps Engineer',
+  'Data Scientist',
+  'Project Manager',
+  'Product Manager',
+  'HR Manager',
+  'Software Engineer Intern'
 ];
 
-const applications = [
-  {
-    fullName: 'Michael Johnson',
-    email: 'michael@example.com',
-    phone: '123-456-7890',
-    experience: 'Senior Frontend Developer at Tech Solutions (2018-2022)\nJunior Developer at WebCraft (2015-2018)',
-    education: 'Bachelor of Science in Computer Science, University of Technology (2015)',
-    skills: ['JavaScript', 'React', 'HTML', 'CSS', 'Git'],
-    coverLetter: 'I am excited to apply for the Frontend Developer position at FMPG. With my experience in React and responsive design, I believe I would be a great fit for your team.',
-    isReferred: false,
-    status: 'reviewing'
-  },
-  {
-    fullName: 'Sarah Williams',
-    email: 'sarah@example.com',
-    phone: '987-654-3210',
-    experience: 'Backend Developer at DataSystems (2019-2023)\nSoftware Engineer Intern at TechGiant (2018)',
-    education: 'Master of Science in Software Engineering, Tech University (2019)\nBachelor of Engineering in Computer Science, State University (2017)',
-    skills: ['Node.js', 'Express', 'MongoDB', 'SQL', 'Python'],
-    coverLetter: 'I am applying for the Backend Developer position. My experience with Node.js and database management makes me confident that I can contribute effectively to your team.',
-    isReferred: true,
-    referrerEmployeeId: 'EMP002',
-    referrerName: 'John Doe',
-    referrerEmail: 'john@example.com',
-    referralMessage: 'Sarah is an excellent backend developer who I worked with at my previous company. She has strong technical skills and would be a great addition to our team.',
-    status: 'shortlisted'
-  },
-  {
-    fullName: 'David Chen',
-    email: 'david@example.com',
-    phone: '555-123-4567',
-    experience: 'UX Designer at Creative Agency (2020-2023)\nGraphic Designer at Design Studio (2017-2020)',
-    education: 'Bachelor of Fine Arts in Graphic Design, Art Institute (2017)',
-    skills: ['Figma', 'Sketch', 'Adobe XD', 'Prototyping', 'User Research'],
-    coverLetter: 'I am interested in the UI/UX Designer position. My portfolio demonstrates my ability to create intuitive and visually appealing user interfaces.',
-    isReferred: false,
-    status: 'pending'
-  },
-  {
-    fullName: 'Alex Rodriguez',
-    email: 'alex@example.com',
-    phone: '444-555-6666',
-    experience: 'Recent Computer Science graduate with internship experience at StartupTech (Summer 2023)',
-    education: 'Bachelor of Science in Computer Science, State University (2023)',
-    skills: ['Python', 'SQL', 'Pandas', 'Scikit-learn', 'Jupyter'],
-    coverLetter: 'I am excited to apply for the Data Science Intern position. As a recent graduate with a strong foundation in statistics and Python, I am eager to gain hands-on experience in machine learning.',
-    isReferred: false,
-    status: 'offered'
-  }
+const jobTypes = [
+  'Full-time',
+  'Part-time',
+  'Contract',
+  'Internship'
 ];
 
-const certificates = [
-  {
-    name: 'Emily Davis',
-    domain: 'Web Development',
-    jobrole: 'Frontend Developer Intern',
-    fromDate: new Date('2023-01-15'),
-    toDate: new Date('2023-04-15'),
-    issuedBy: 'FMPG'
-  },
-  {
-    name: 'Ryan Wilson',
-    domain: 'Mobile Development',
-    jobrole: 'React Native Developer',
-    fromDate: new Date('2023-02-01'),
-    toDate: new Date('2023-05-01'),
-    issuedBy: 'FMPG'
-  },
-  {
-    name: 'Sophia Martinez',
-    domain: 'UI/UX Design',
-    jobrole: 'UI/UX Design Intern',
-    fromDate: new Date('2023-03-10'),
-    toDate: new Date('2023-06-10'),
-    issuedBy: 'FMPG'
-  }
+const locations = [
+  'Remote',
+  'On-site',
+  'Hybrid'
 ];
 
-const offerLetters = [
-  {
-    candidateName: 'Alex Rodriguez',
-    email: 'alex@example.com',
-    position: 'Data Science Intern',
-    department: 'Data Science',
-    salary: 24000, // Annual salary
-    startDate: new Date('2024-07-01'),
-    joiningLocation: 'Remote',
-    workType: 'Remote',
-    benefits: ['Health Insurance', 'Learning Allowance', 'Flexible Hours'],
-    reportingManager: 'Dr. Sarah Johnson',
-    companyName: 'FMPG',
-    hrContactName: 'HR Team',
-    hrContactEmail: 'fmpg974@gmail.com',
-    hrContactPhone: '+91-9876543210',
-    issuedBy: 'FMPG',
-    status: 'Pending',
-    validUntil: new Date('2024-06-15'),
-    additionalNotes: 'This is a 6-month internship program with possibility of full-time conversion based on performance.'
-  },
-  {
-    candidateName: 'Jane Smith',
-    email: 'jane@example.com',
-    position: 'Backend Developer',
-    department: 'Development',
-    salary: 85000,
-    startDate: new Date('2024-06-15'),
-    joiningLocation: 'New Delhi, India',
-    workType: 'On-site',
-    benefits: ['Health Insurance', 'PF', 'Paid Leave', 'Performance Bonus'],
-    reportingManager: 'John Doe',
-    companyName: 'FMPG',
-    hrContactName: 'HR Team',
-    hrContactEmail: 'fmpg974@gmail.com',
-    hrContactPhone: '+91-9876543210',
-    issuedBy: 'FMPG',
-    status: 'Accepted',
-    validUntil: new Date('2024-06-01'),
-    additionalNotes: 'Welcome to our development team! We look forward to working with you.'
-  }
+const cityLocations = [
+  'New Delhi, India',
+  'Bangalore, India',
+  'Mumbai, India',
+  'Hyderabad, India',
+  'Pune, India'
 ];
 
-const reviews = [
-  {
-    userEmail: 'john@example.com',
-    userName: 'John Doe',
-    rating: 5,
-    title: 'Excellent work environment and growth opportunities',
-    content: 'FMPG provides an excellent work environment with great learning opportunities. The team is supportive and management is understanding. The projects are challenging and help in skill development.',
-    department: 'Development',
-    position: 'Senior Developer',
-    workType: 'On-site',
-    employmentDuration: '2+ years',
-    pros: 'Great work-life balance, supportive team, challenging projects, good compensation',
-    cons: 'Sometimes project deadlines can be tight',
-    advice: 'Be ready to learn new technologies and take on challenging projects',
-    status: 'approved',
-    reviewerType: 'employee',
-    isAnonymous: false
-  },
-  {
-    userEmail: 'emily@example.com',
-    userName: 'Emily Davis',
-    rating: 4,
-    title: 'Great place for interns to learn and grow',
-    content: 'My internship at FMPG was a wonderful experience. I learned a lot about frontend development and got hands-on experience with real projects. The mentorship program is excellent.',
-    department: 'Development',
-    position: 'Frontend Developer Intern',
-    workType: 'Hybrid',
-    employmentDuration: '3 months (Internship)',
-    pros: 'Excellent mentorship, real project experience, friendly team',
-    cons: 'Limited intern positions available',
-    advice: 'Make the most of the mentorship program and ask questions',
-    status: 'approved',
-    reviewerType: 'employee',
-    isAnonymous: false
-  },
-  {
-    userEmail: 'jane@example.com',
-    userName: 'Jane Smith',
-    rating: 5,
-    title: 'Excited to join the team!',
-    content: 'I recently received an offer from FMPG and I am thrilled to join the backend development team. The interview process was smooth and professional. Looking forward to contributing to innovative projects.',
-    department: 'Development',
-    position: 'Backend Developer',
-    workType: 'On-site',
-    employmentDuration: 'Offer Recipient',
-    pros: 'Professional interview process, competitive offer, exciting projects',
-    cons: 'None so far',
-    advice: 'Great company to work for, highly recommended',
-    status: 'pending',
-    reviewerType: 'offer_recipient',
-    isAnonymous: false
-  }
-];
+// ======================================================
+// HELPERS
+// ======================================================
 
-// Seed function
+const slugify = (value = '') => {
+  return value
+    .toString()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
+const createUniqueApplicationSlug = (
+  name,
+  applicationId
+) => {
+  const baseSlug = slugify(name) || 'application';
+
+  return `${baseSlug}-${applicationId.toString()}`;
+};
+
+// ======================================================
+// SEED DATABASE
+// ======================================================
+
 const seedDatabase = async () => {
   try {
-    // Connect to database
     await connectDB();
-    console.log('🔌 Connected to database for seeding');
 
-    // Clear existing data
-    await User.deleteMany({});
-    await Job.deleteMany({});
-    await Application.deleteMany({});
-    await Certificate.deleteMany({});
-    await OfferLetter.deleteMany({});
-    await Review.deleteMany({});
-    await Notification.deleteMany({});
+    console.log(
+      '🔌 Connected to database for large seeding'
+    );
+
+    // ==================================================
+    // CLEAR DATABASE
+    // ==================================================
+
+    await Promise.all([
+      User.deleteMany({}),
+      Job.deleteMany({}),
+      Application.deleteMany({}),
+      Certificate.deleteMany({}),
+      OfferLetter.deleteMany({}),
+      Review.deleteMany({}),
+      Notification.deleteMany({})
+    ]);
+
     console.log('🧹 Cleared existing data');
 
-    // Create users with hashed passwords
-    const hashedUsers = await Promise.all(
-      users.map(async (user) => {
-        const hashedPassword = await bcrypt.hash(user.password, 10);
-        return { ...user, password: hashedPassword, isEmailVerified: true };
-      })
+    const passwordHash = await bcrypt.hash(
+      'password123',
+      10
     );
-    const createdUsers = await User.insertMany(hashedUsers);
-    console.log(`👤 Created ${createdUsers.length} users`);
 
-    // Create jobs with admin user as poster
-    const adminUser = createdUsers.find(user => user.role === 'admin' || user.role === 'super-admin');
-    const jobsWithPostedBy = jobs.map(job => ({
-      ...job,
-      postedBy: adminUser._id
-    }));
-    const createdJobs = await Job.insertMany(jobsWithPostedBy);
-    console.log(`💼 Created ${createdJobs.length} jobs`);
+    // ==================================================
+    // 1. GENERATE USERS
+    // ==================================================
 
-    // Create applications linked to jobs and users
-    const regularUser = createdUsers.find(user => user.email === 'user@example.com');
-    const applicationsWithIds = applications.map((application, index) => ({
-      ...application,
-      jobId: createdJobs[index % createdJobs.length]._id,
-      userId: regularUser._id,
-      // Add sample question answers based on the job's questions
-      questionAnswers: createdJobs[index % createdJobs.length].questions?.map(question => ({
-        questionId: question._id,
-        questionText: question.questionText,
-        questionType: question.questionType,
-        answer: question.questionType === 'text' ? 'Sample answer to the question' :
-          question.questionType === 'rating' ? 4 :
-            question.questionType === 'multipleChoice' ? question.options[0] :
-              question.questionType === 'checkbox' ? [question.options[0], question.options[1]] : ''
-      })) || []
-    }));
-    const createdApplications = await Application.insertMany(applicationsWithIds);
-    console.log(`📝 Created ${createdApplications.length} applications`);
+    console.log('👤 Generating users...');
 
-    // Create certificates linked to users
-    const certificatesWithUserId = certificates.map(certificate => ({
-      ...certificate,
-      userId: adminUser._id
-    }));
-    const createdCertificates = await Certificate.insertMany(certificatesWithUserId);
-    console.log(`🏆 Created ${createdCertificates.length} certificates`);
+    const usersData = [];
+    const usedEmails = new Set();
 
-    // Create offer letters linked to users
-    const janeUser = createdUsers.find(user => user.email === 'jane@example.com');
-    const alexApplication = createdApplications.find(app => app.email === 'alex@example.com');
-    const offerLettersWithUserId = offerLetters.map(offer => {
-      let userId = null;
-      if (offer.email === 'jane@example.com') {
-        userId = janeUser._id;
-      } else if (offer.email === 'alex@example.com' && alexApplication) {
-        userId = alexApplication.userId;
+    let empCounter = 1;
+
+    const getUniqueEmail = (baseEmail) => {
+      let email = baseEmail.toLowerCase();
+      let counter = 1;
+
+      while (usedEmails.has(email)) {
+        const parts = baseEmail.split('@');
+
+        email = `${parts[0]}${counter}@${parts[1]}`
+          .toLowerCase();
+
+        counter++;
       }
-      return {
-        ...offer,
-        userId
-      };
+
+      usedEmails.add(email);
+
+      return email;
+    };
+
+    const getNextEmpId = (prefix) => {
+      const id = `${prefix}${empCounter
+        .toString()
+        .padStart(3, '0')}`;
+
+      empCounter++;
+
+      return id;
+    };
+
+    // ==================================================
+    // MAIN SUPER ADMIN
+    // ==================================================
+
+    const mainAdminEmail = 'contact@gmail.com';
+
+    usedEmails.add(mainAdminEmail);
+
+    usersData.push({
+      name: 'Admin User',
+      email: mainAdminEmail,
+      password: passwordHash,
+      role: 'super-admin',
+      status: 'active',
+      department: 'IT',
+      position: 'IT Manager',
+      employeeId: getNextEmpId('EMP')
     });
-    const createdOfferLetters = await OfferLetter.insertMany(offerLettersWithUserId);
-    console.log(`📋 Created ${createdOfferLetters.length} offer letters`);
 
-    // Create reviews linked to users
-    const johnUser = createdUsers.find(user => user.email === 'john@example.com');
-    const emilyUser = createdUsers.find(user => user.email === 'emily@example.com');
-    const reviewsWithUserId = reviews.map(review => {
-      let userId = null;
-      let approvedBy = null;
-      let approvedAt = null;
+    // ==================================================
+    // ADMINS
+    // ==================================================
 
-      if (review.userEmail === 'john@example.com') {
-        userId = johnUser._id;
-      } else if (review.userEmail === 'emily@example.com') {
-        userId = emilyUser._id;
-      } else if (review.userEmail === 'jane@example.com') {
-        userId = janeUser._id;
-      }
+    for (let i = 0; i < COUNTS.admin - 1; i++) {
+      usersData.push({
+        name: faker.person.fullName(),
 
-      // Set approval details for approved reviews
-      if (review.status === 'approved') {
-        approvedBy = adminUser._id;
-        approvedAt = new Date();
-      }
+        email: getUniqueEmail(
+          faker.internet.email()
+        ),
 
-      return {
-        ...review,
-        userId,
-        approvedBy,
-        approvedAt
-      };
-    });
-    const createdReviews = await Review.insertMany(reviewsWithUserId);
-    console.log(`⭐ Created ${createdReviews.length} reviews`);
+        password: passwordHash,
 
+        role: 'admin',
 
-    // const createdRecommendations = await Recommendation.insertMany(recommendationsWithUserId);
-    // console.log(`🤝 Created ${createdRecommendations.length} recommendations`);
+        status: 'active',
 
-    console.log('✅ Database seeded successfully');
-    console.log('\n📊 Summary:');
-    // console.log(`   Users: ${createdUsers.length + createdAdditionalUsers.length}`);
-    console.log(`   Jobs: ${createdJobs.length}`);
-    console.log(`   Applications: ${createdApplications.length}`);
-    console.log(`   Certificates: ${createdCertificates.length}`);
-    console.log(`   Offer Letters: ${createdOfferLetters.length}`);
-    console.log(`   Reviews: ${createdReviews.length}`);
-    // console.log(`   Recommendations: ${createdRecommendations.length}`);
+        department: 'IT',
+
+        position: 'Admin',
+
+        employeeId: getNextEmpId('ADM')
+      });
+    }
+
+    // ==================================================
+    // HR EMPLOYEES
+    // ==================================================
+
+    for (let i = 0; i < COUNTS.hr; i++) {
+      usersData.push({
+        name: faker.person.fullName(),
+
+        email: getUniqueEmail(
+          faker.internet.email()
+        ),
+
+        password: passwordHash,
+
+        role: 'employee',
+
+        status: 'active',
+
+        department: 'HR',
+
+        position: 'HR Executive',
+
+        employeeId: getNextEmpId('HR')
+      });
+    }
+
+    // ==================================================
+    // USERS
+    // ==================================================
+
+    for (let i = 0; i < COUNTS.user; i++) {
+      const isEmployee = faker.datatype.boolean(0.3);
+
+      usersData.push({
+        name: faker.person.fullName(),
+
+        email: getUniqueEmail(
+          faker.internet.email()
+        ),
+
+        password: passwordHash,
+
+        role: 'user',
+
+        status: isEmployee
+          ? 'active'
+          : faker.helpers.arrayElement([
+              'inactive',
+              'former',
+              'suspended'
+            ]),
+
+        department: isEmployee
+          ? faker.helpers.arrayElement(departments)
+          : undefined,
+
+        position: isEmployee
+          ? faker.helpers.arrayElement(positions)
+          : undefined,
+
+        employeeId: isEmployee
+          ? getNextEmpId('EMP')
+          : undefined
+      });
+    }
+
+    const createdUsers = await User.insertMany(
+      usersData
+    );
+
+    const admins = createdUsers.filter(
+      (user) =>
+        user.role === 'admin' ||
+        user.role === 'super-admin'
+    );
+
+    const regularUsers = createdUsers.filter(
+      (user) => user.role === 'user'
+    );
+
+    console.log(
+      `✅ Created ${createdUsers.length} users`
+    );
+
+    // ==================================================
+    // 2. GENERATE JOBS
+    // ==================================================
+
+    console.log('💼 Generating jobs...');
+
+    const jobsData = [];
+
+    for (let i = 0; i < COUNTS.jobs; i++) {
+      const dept = faker.helpers.arrayElement(
+        departments
+      );
+
+      const pos = faker.helpers.arrayElement(
+        positions
+      );
+
+      jobsData.push({
+        title: `${faker.person.jobArea()} ${pos} ${
+          i + 1
+        }`,
+
+        company: 'FMPG',
+
+        description: faker.lorem.paragraphs(2),
+
+        requirements: Array.from(
+          { length: 4 },
+          () => faker.lorem.sentence()
+        ),
+
+        responsibilities: Array.from(
+          { length: 4 },
+          () => faker.lorem.sentence()
+        ),
+
+        location: faker.helpers.arrayElement([
+          ...locations,
+          ...cityLocations
+        ]),
+
+        type: faker.helpers.arrayElement(jobTypes),
+
+        salary: `₹${faker.number.int({
+          min: 30,
+          max: 150
+        })},000 - ₹${faker.number.int({
+          min: 160,
+          max: 300
+        })},000`,
+
+        department: dept,
+
+        position: pos,
+
+        postedBy:
+          faker.helpers.arrayElement(admins)._id,
+
+        isActive: faker.datatype.boolean(0.8),
+
+        isPublished: true,
+
+        questions: [
+          {
+            questionText:
+              `Years of experience in ${dept}?`,
+
+            questionType: 'text',
+
+            required: true,
+
+            order: 0
+          },
+          {
+            questionText:
+              'Rate your skills in this domain',
+
+            questionType: 'rating',
+
+            required: true,
+
+            maxRating: 5,
+
+            order: 1
+          }
+        ]
+      });
+    }
+
+    const createdJobs = await Job.insertMany(
+      jobsData
+    );
+
+    console.log(
+      `✅ Created ${createdJobs.length} jobs`
+    );
+
+    // ==================================================
+    // 3. GENERATE APPLICATIONS
+    // ==================================================
+
+    console.log('📝 Generating applications...');
+
+    const applicationsData = [];
+
+    for (
+      let i = 0;
+      i < COUNTS.applications;
+      i++
+    ) {
+      const job = faker.helpers.arrayElement(
+        createdJobs
+      );
+
+      const user = faker.helpers.arrayElement(
+        regularUsers
+      );
+
+      const status = faker.helpers.arrayElement([
+        'pending',
+        'reviewing',
+        'shortlisted',
+        'offered',
+        'rejected',
+        'hired'
+      ]);
+
+      /*
+       * IMPORTANT
+       *
+       * Generate ObjectId before creating the slug.
+       * MongoDB ObjectId is unique.
+       *
+       * Example:
+       *
+       * erma-krajcik-6a536cb9192943d8b04c18de
+       *
+       * Even when the same user has multiple
+       * applications, every slug remains unique.
+       */
+
+      const applicationId =
+        new mongoose.Types.ObjectId();
+
+      const createdAt = faker.date.past({
+        years: 1
+      });
+
+      applicationsData.push({
+        _id: applicationId,
+
+        jobId: job._id,
+
+        userId: user._id,
+
+        fullName: user.name,
+
+        slug: createUniqueApplicationSlug(
+          user.name,
+          applicationId
+        ),
+
+        email: user.email,
+
+        phone: faker.phone.number(),
+
+        experience: faker.lorem.sentences(2),
+
+        education: faker.lorem.sentence(),
+
+        skills: Array.from(
+          { length: 5 },
+          () =>
+            `${faker.hacker.adjective()} ${faker.hacker.noun()}`
+        ),
+
+        coverLetter: faker.lorem.paragraph(),
+
+        status,
+
+        isReferred:
+          faker.datatype.boolean(0.1),
+
+        questionAnswers: job.questions.map(
+          (question) => ({
+            questionId: question._id,
+
+            questionText:
+              question.questionText,
+
+            questionType:
+              question.questionType,
+
+            answer:
+              question.questionType === 'text'
+                ? faker.lorem.sentence()
+                : faker.number.int({
+                    min: 1,
+                    max: 5
+                  })
+          })
+        ),
+
+        createdAt,
+
+        updatedAt: createdAt,
+
+        __v: 0
+      });
+    }
+
+    /*
+     * IMPORTANT:
+     *
+     * Use native MongoDB collection insert.
+     *
+     * Application.insertMany() is triggering
+     * your Application model middleware/plugin
+     * which changes:
+     *
+     * erma-krajcik-OBJECT_ID
+     *
+     * back to:
+     *
+     * erma-krajcik
+     *
+     * That causes:
+     *
+     * E11000 duplicate key slug_1
+     */
+
+    const applicationInsertResult =
+      await Application.collection.insertMany(
+        applicationsData,
+        {
+          ordered: true
+        }
+      );
+
+    console.log(
+      `✅ Created ${applicationInsertResult.insertedCount} applications`
+    );
+// ==================================================
+// 4. GENERATE REVIEWS
+// ==================================================
+
+console.log('⭐ Generating reviews...');
+
+const reviewsData = [];
+
+// Read valid reviewerType values directly from Review schema.
+// This prevents seed failures when enum values change.
+const reviewerTypeEnum =
+  Review.schema.path('reviewerType')?.enumValues || [];
+
+console.log(
+  'ℹ️ Valid reviewer types:',
+  reviewerTypeEnum
+);
+
+if (reviewerTypeEnum.length === 0) {
+  throw new Error(
+    'Review.reviewerType enum is missing or has no valid values'
+  );
+}
+
+for (let i = 0; i < COUNTS.reviews; i++) {
+  const user = faker.helpers.arrayElement(
+    createdUsers
+  );
+
+  const status = faker.helpers.arrayElement([
+    'pending',
+    'approved',
+    'rejected'
+  ]);
+
+  const reviewerType =
+    faker.helpers.arrayElement(reviewerTypeEnum);
+
+  reviewsData.push({
+    userId: user._id,
+
+    userEmail: user.email,
+
+    userName: user.name,
+
+    rating: faker.number.int({
+      min: 1,
+      max: 5
+    }),
+
+    title: faker.lorem
+      .sentence()
+      .substring(0, 100),
+
+    content: faker.lorem
+      .paragraph()
+      .substring(0, 1000),
+
+    department:
+      user.department ||
+      faker.helpers.arrayElement(departments),
+
+    position:
+      user.position ||
+      faker.helpers.arrayElement(positions),
+
+    workType:
+      faker.helpers.arrayElement(locations),
+
+    employmentDuration:
+      faker.helpers.arrayElement([
+        'less than 1 year',
+        '1-2 years',
+        '2+ years',
+        '5+ years'
+      ]),
+
+    pros: faker.lorem
+      .sentences(2)
+      .substring(0, 500),
+
+    cons: faker.lorem
+      .sentences(2)
+      .substring(0, 500),
+
+    status,
+
+    approvedBy:
+      status === 'approved'
+        ? faker.helpers.arrayElement(admins)._id
+        : undefined,
+
+    approvedAt:
+      status === 'approved'
+        ? new Date()
+        : undefined,
+
+    reviewerType,
+
+    isAnonymous:
+      faker.datatype.boolean(0.2)
+  });
+}
+
+const createdReviews = await Review.insertMany(
+  reviewsData
+);
+
+console.log(
+  `✅ Created ${createdReviews.length} reviews`
+);
+    // ==================================================
+    // 5. GENERATE CERTIFICATES
+    // ==================================================
+
+    console.log('🏆 Generating certificates...');
+
+    const certificatesData = [];
+
+    for (
+      let i = 0;
+      i < COUNTS.certificates;
+      i++
+    ) {
+      const user = faker.helpers.arrayElement(
+        createdUsers
+      );
+
+      certificatesData.push({
+        userId: user._id,
+
+        name: user.name,
+
+        domain:
+          faker.helpers.arrayElement(departments),
+
+        jobrole:
+          faker.helpers.arrayElement(positions),
+
+        fromDate: faker.date.past({
+          years: 1
+        }),
+
+        toDate: new Date(),
+
+        issuedBy: 'FMPG'
+      });
+    }
+
+    await Certificate.insertMany(
+      certificatesData
+    );
+
+    console.log(
+      `✅ Created ${COUNTS.certificates} certificates`
+    );
+
+    // ==================================================
+    // 6. GENERATE OFFER LETTERS
+    // ==================================================
+
+    console.log('📋 Generating offer letters...');
+
+    const offerLettersData = [];
+
+    for (
+      let i = 0;
+      i < COUNTS.offerLetters;
+      i++
+    ) {
+      const user = faker.helpers.arrayElement(
+        regularUsers
+      );
+
+      offerLettersData.push({
+        userId: user._id,
+
+        candidateName: user.name,
+
+        email: user.email,
+
+        position:
+          faker.helpers.arrayElement(positions),
+
+        department:
+          faker.helpers.arrayElement(departments),
+
+        salary: faker.number.int({
+          min: 300000,
+          max: 2000000
+        }),
+
+        startDate: faker.date.future(),
+
+        joiningLocation:
+          faker.helpers.arrayElement(locations),
+
+        workType:
+          faker.helpers.arrayElement([
+            'On-site',
+            'Remote',
+            'Hybrid'
+          ]),
+
+        benefits: [
+          'Health Insurance',
+          'PF',
+          'Paid Leave'
+        ],
+
+        reportingManager:
+          faker.person.fullName(),
+
+        companyName: 'FMPG',
+
+        hrContactName: 'HR Team',
+
+        hrContactEmail: 'fmpg974@gmail.com',
+
+        hrContactPhone: faker.phone.number(),
+
+        issuedBy: 'FMPG',
+
+        status:
+          faker.helpers.arrayElement([
+            'Pending',
+            'Accepted',
+            'Rejected'
+          ]),
+
+        validUntil: faker.date.future()
+      });
+    }
+
+    await OfferLetter.insertMany(
+      offerLettersData
+    );
+
+    console.log(
+      `✅ Created ${COUNTS.offerLetters} offer letters`
+    );
+
+    // ==================================================
+    // COMPLETE
+    // ==================================================
+
+    console.log('');
+    console.log(
+      '🎉 Large database seeding completed successfully!'
+    );
+
+    console.log('');
+    console.log('📊 Seed Summary');
+    console.log(
+      `👤 Users: ${createdUsers.length}`
+    );
+    console.log(
+      `💼 Jobs: ${createdJobs.length}`
+    );
+    console.log(
+      `📝 Applications: ${applicationInsertResult.insertedCount}`
+    );
+    console.log(
+      `⭐ Reviews: ${createdReviews.length}`
+    );
+    console.log(
+      `🏆 Certificates: ${COUNTS.certificates}`
+    );
+    console.log(
+      `📋 Offer Letters: ${COUNTS.offerLetters}`
+    );
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('');
+    console.error(
+      '❌ Error in large seeding:'
+    );
+
+    console.error(error);
+
     process.exit(1);
   }
 };
 
-// Run the seed function
 seedDatabase();

@@ -2,6 +2,7 @@ const { logAudit } = require('../services/auditService');
 const Contract = require("../models/offerContract");
 const OfferLetter = require("../models/offerLetter");
 const User = require("../models/user");
+const Employee = require("../models/Employee");
 const { uploadFile, deleteImage } = require('../config/cloudinary');
 const emailService = require('../services/emailService');
 const mongoose = require("mongoose");
@@ -220,6 +221,18 @@ const acceptOffer = async (req, res) => {
       }
       
       await user.save();
+
+      // Keep legacy User fields working while establishing the HRMS employee master.
+      await Employee.findOneAndUpdate({ userId: user._id }, {
+        $setOnInsert: {
+          userId: user._id, employeeCode: user.employeeId, employmentStatus: 'onboarding',
+          joiningDate: savedContract?.employmentDetails?.startDate || offerLetter.startDate,
+          workLocation: savedContract?.employmentDetails?.joiningLocation || offerLetter.joiningLocation,
+          personalInfo: savedContract?.personalInfo || {}, emergencyContact: savedContract?.personalInfo?.emergencyContact || {},
+          bankInfo: savedContract?.bankingInfo || {}, documents: savedContract?.documents || [],
+          sourceApplicationId: offerLetter.applicationId, sourceOfferLetterId: offerLetter._id, sourceContractId: savedContract?._id
+        }
+      }, { upsert: true, new: true });
       
       // Update application status to hired
       if (offerLetter.applicationId) {
@@ -542,6 +555,7 @@ const updateContractStatus = async (req, res) => {
         user.reportingManager = contract.employmentDetails.reportingManager;
         
         await user.save();
+        await Employee.findOneAndUpdate({ userId: user._id }, { $setOnInsert: { userId: user._id, employeeCode: user.employeeId, employmentStatus: 'onboarding', joiningDate: contract.employmentDetails.startDate, workLocation: contract.employmentDetails.joiningLocation, personalInfo: contract.personalInfo, emergencyContact: contract.personalInfo?.emergencyContact, bankInfo: contract.bankingInfo, documents: contract.documents, sourceApplicationId: contract.applicationId, sourceOfferLetterId: contract.offerLetterId, sourceContractId: contract._id } }, { upsert: true });
       }
     }
     

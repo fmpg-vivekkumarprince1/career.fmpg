@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); module.exports = mongoose.model('DocumentVerification', new mongoose.Schema({ documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'GeneratedDocument', required: true }, verificationCode: { type: String, required: true }, verifiedAt: { type: Date, default: Date.now }, ipAddress: String, result: String }, { timestamps: true }));

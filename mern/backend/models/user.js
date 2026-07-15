@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     default: "user",
-    enum: ["user", "admin", "employee", "super-admin"]
+    // Legacy roles remain valid; specialised HRMS roles are additive.
+    enum: ["user", "admin", "employee", "super-admin", "hr-admin", "recruiter", "manager", "finance", "payroll-admin", "candidate", "verifier"]
   },
   permissions: {
     canGenerateCertificate: { type: Boolean, default: false },

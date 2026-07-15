@@ -1,0 +1,2 @@
+const mongoose = require('mongoose');
+module.exports = mongoose.model('EmployeeHistory', new mongoose.Schema({ employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true, index: true }, event: { type: String, required: true }, before: mongoose.Schema.Types.Mixed, after: mongoose.Schema.Types.Mixed, effectiveDate: Date, changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } }, { timestamps: true }));

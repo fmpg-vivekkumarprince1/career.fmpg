@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); const schema = new mongoose.Schema({ name: { type: String, required: true }, date: { type: Date, required: true }, location: String, optional: { type: Boolean, default: false } }, { timestamps: true }); schema.index({ date: 1, location: 1 }, { unique: true }); module.exports = mongoose.model('Holiday', schema);
