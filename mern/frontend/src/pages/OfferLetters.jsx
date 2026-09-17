@@ -44,20 +44,29 @@ const OfferLetters = () => {
       const response = await offerLetterService.issueOfferLetter(offerData);
       toast.success('Offer letter issued successfully!');
       
-      // Send email automatically
-      if (offerData.email) {
-        console.log('Sending offer letter email to:', offerData.email);
-        await offerLetterService.sendOfferLetterEmail(response.data.offerLetterId, {
-          recipientEmail: offerData.email
-        });
-        toast.success('Offer letter issued and emailed successfully!');
+      // Refresh the list immediately
+      try {
+        await fetchOfferLetters();
+      } catch (fetchErr) {
+        console.warn('Failed to refresh offer letters:', fetchErr);
       }
-      
-      // Refresh the list
-      await fetchOfferLetters();
       
       // Switch to list tab to show the new offer letter
       setActiveTab('list');
+
+      // Send email automatically in an isolated try-catch so email latency/timeout never marks the creation as failed
+      if (offerData.email) {
+        try {
+          console.log('Sending offer letter email to:', offerData.email);
+          await offerLetterService.sendOfferLetterEmail(response.data.offerLetterId, {
+            recipientEmail: offerData.email
+          });
+          toast.success('Offer letter issued and emailed successfully!');
+        } catch (emailErr) {
+          console.warn('Auto email dispatch timed out or failed:', emailErr);
+          toast.warning('Offer letter created! However, email delivery took longer than expected. You can resend it anytime from the list.');
+        }
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to issue offer letter');
       console.error('Error:', err);

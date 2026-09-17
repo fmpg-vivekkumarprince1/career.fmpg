@@ -36,18 +36,51 @@ const createTransporter = () => {
   const mailSecure = parseBoolean(process.env.MAIL_SECURE || process.env.SMTP_SECURE, mailPort === 465);
   const mailService = process.env.MAIL_SERVICE;
 
+  // Socket and connection timeouts to prevent hanging on cloud/production environments
+  const timeoutOptions = {
+    connectionTimeout: 12000, // 12 seconds max to connect
+    greetingTimeout: 8000,    // 8 seconds max for greeting
+    socketTimeout: 25000,     // 25 seconds max for inactivity
+    pool: true,               // Connection pooling to keep socket warm
+    maxConnections: 3,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
+  };
+
   if (mailHost) {
     return nodemailer.createTransport({
       host: mailHost,
       port: mailPort,
       secure: mailSecure,
       auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false
+      },
+      ...timeoutOptions
     });
   }
 
+  // If custom service specified (e.g. sendgrid, mailgun)
+  if (mailService && mailService.toLowerCase() !== "gmail") {
+    return nodemailer.createTransport({
+      service: mailService,
+      auth: { user, pass },
+      ...timeoutOptions
+    });
+  }
+
+  // Default to smtp.gmail.com with port 587 (STARTTLS) or 465 based on configuration
+  // Port 587 is universally open on cloud hosting (Vercel, AWS, GCP) unlike 465
   return nodemailer.createTransport({
-    service: mailService || "gmail",
+    host: "smtp.gmail.com",
+    port: mailPort || 587,
+    secure: mailSecure,
     auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false
+    },
+    ...timeoutOptions
   });
 };
 
@@ -83,16 +116,34 @@ const getTransporter = () => {
 };
 
 const sendMail = async (mailOptions) => {
+  const { user, pass } = getEmailCredentials();
+  if (!user || !pass) {
+    console.warn("⚠️ No email credentials configured (EMAIL_USER or EMAIL_PASS missing). Skipping email dispatch.");
+    return { skipped: true, message: "Email credentials not configured" };
+  }
+
   const transporter = getTransporter();
   try {
     if (!mailOptions.replyTo) {
-      mailOptions.replyTo = process.env.REPLY_TO_EMAIL || process.env.EMAIL_USER;
+      mailOptions.replyTo = process.env.REPLY_TO_EMAIL || user;
     }
     if (!mailOptions.from) {
-      mailOptions.from = process.env.EMAIL_USER;
+      mailOptions.from = user;
     }
-    return await transporter.sendMail(mailOptions);
+
+    // Safety timeout: 25 seconds max so email dispatch can never hang an HTTP request indefinitely
+    const emailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Email dispatch timed out after 25 seconds")), 25000)
+    );
+
+    return await Promise.race([emailPromise, timeoutPromise]);
   } catch (error) {
+    console.error("sendMail error:", error.message || error);
+    // If connection was dropped or socket timed out, reset cached transporter so next call gets a clean connection
+    if (error?.code === "ETIMEDOUT" || error?.code === "ESOCKET" || error?.code === "ECONNRESET") {
+      cachedTransporter = null;
+    }
     throw buildMailAuthError(error);
   }
 };

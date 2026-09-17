@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { userService, offerLetterService, contractService } from '../../services/api';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
-import { FaUser, FaUserTie, FaUserShield, FaSearch, FaFilter, FaEdit, FaTrash, FaEye, FaCheck, FaTimes, FaDownload, FaCog, FaUsers, FaClock, FaBan, FaCrown, FaChevronLeft, FaChevronRight, FaFileAlt, FaFileContract } from 'react-icons/fa';
+import { FaUser, FaUserTie, FaUserShield, FaSearch, FaFilter, FaEdit, FaTrash, FaEye, FaCheck, FaTimes, FaDownload, FaCog, FaUsers, FaClock, FaBan, FaCrown, FaChevronLeft, FaChevronRight, FaFileAlt, FaFileContract, FaUserPlus } from 'react-icons/fa';
 import { CSVLink } from 'react-csv';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -92,6 +92,61 @@ const EmployeeManagement = () => {
   const [activeTab, setActiveTab] = useState('offer'); // 'offer' or 'contract'
   const [selectedFile, setSelectedFile] = useState(null);
   const [expandedSection, setExpandedSection] = useState('required');
+
+  // Add Employee State (Super Admin Only)
+  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
+  const [addEmployeeLoading, setAddEmployeeLoading] = useState(false);
+  const [addEmployeeForm, setAddEmployeeForm] = useState({
+    employeeId: '',
+    name: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    role: 'employee',
+    status: 'active',
+    department: 'Development',
+    position: 'Frontend Developer',
+    employmentType: 'full_time',
+    joiningDate: new Date().toISOString().split('T')[0],
+    reportingManager: '',
+    workLocation: 'Office'
+  });
+
+  const handleCreateEmployee = async (e) => {
+    e?.preventDefault();
+    if (!addEmployeeForm.name.trim() || !addEmployeeForm.email.trim() || !addEmployeeForm.password) {
+      toast.error('Name, email, and password are required');
+      return;
+    }
+
+    try {
+      setAddEmployeeLoading(true);
+      await userService.createEmployee(addEmployeeForm);
+      toast.success('Employee created successfully!');
+      setShowAddEmployeeModal(false);
+      setAddEmployeeForm({
+        employeeId: '',
+        name: '',
+        email: '',
+        password: '',
+        phoneNumber: '',
+        role: 'employee',
+        status: 'active',
+        department: 'Development',
+        position: 'Frontend Developer',
+        employmentType: 'full_time',
+        joiningDate: new Date().toISOString().split('T')[0],
+        reportingManager: '',
+        workLocation: 'Office'
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      toast.error(error.response?.data?.message || 'Failed to create employee');
+    } finally {
+      setAddEmployeeLoading(false);
+    }
+  };
 
   const handleViewOfferContract = async (user, tab = 'offer') => {
     // Both user.offerLetter (from populate) or user.latestOffer might be available
@@ -572,7 +627,16 @@ const EmployeeManagement = () => {
               </div>
             </div>
           </div>
-            <div className="flex space-x-4">
+            <div className="flex items-center space-x-3">
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setShowAddEmployeeModal(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-all shadow-md shadow-emerald-950/20 cursor-pointer"
+                >
+                  <FaUserPlus className="w-4 h-4" />
+                  <span>Add Employee</span>
+                </button>
+              )}
               <button
                 onClick={handleCSVExport}
                 className="fmpg-secondary-button inline-flex items-center space-x-2 px-4 py-2.5 transition-colors"
@@ -732,6 +796,15 @@ const EmployeeManagement = () => {
                 Page {currentPage} of {totalPages}
               </div>
               <div className="flex flex-wrap gap-2">
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => setShowAddEmployeeModal(true)}
+                    className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm cursor-pointer"
+                  >
+                    <FaUserPlus className="mr-2" />
+                    Add Employee
+                  </button>
+                )}
                 <button
                   onClick={() => setShowBulkModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
@@ -1878,6 +1951,293 @@ const EmployeeManagement = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Employee Modal (Super Admin Only) */}
+        {isSuperAdmin && showAddEmployeeModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-850">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <FaUserPlus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Add New Employee</h3>
+                    <p className="text-xs text-gray-400">Onboard employee profile, set staff role, department, and HRMS records.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddEmployeeModal(false)}
+                  className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateEmployee}>
+                <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                  {/* Employee ID & Name */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Employee ID / Code
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Auto-generated (e.g. EMP001)"
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500"
+                        value={addEmployeeForm.employeeId}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, employeeId: e.target.value })}
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">Leave empty to auto-generate next sequential code.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Full Name <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. John Doe"
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500"
+                        value={addEmployeeForm.name}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, name: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email & Password */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Email Address <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="employee@company.com"
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500"
+                        value={addEmployeeForm.email}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, email: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Initial Password <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Minimum 6 characters"
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500"
+                        value={addEmployeeForm.password}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, password: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phone & Role */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="+91 98765 43210"
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500"
+                        value={addEmployeeForm.phoneNumber}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, phoneNumber: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        System Role
+                      </label>
+                      <select
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                        value={addEmployeeForm.role}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, role: e.target.value })}
+                      >
+                        <option value="employee">Employee</option>
+                        <option value="admin">Admin</option>
+                        <option value="hr-admin">HR Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="recruiter">Recruiter</option>
+                        <option value="finance">Finance</option>
+                        <option value="payroll-admin">Payroll Admin</option>
+                        <option value="super-admin">Super Admin</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Department & Position */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Department
+                      </label>
+                      <select
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                        value={addEmployeeForm.department}
+                        onChange={(e) => {
+                          const dept = e.target.value;
+                          const positions = DEPARTMENT_POSITIONS[dept] || [];
+                          setAddEmployeeForm({
+                            ...addEmployeeForm,
+                            department: dept,
+                            position: positions[0] || ''
+                          });
+                        }}
+                      >
+                        {Object.values(DEPARTMENTS).map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Designation / Position
+                      </label>
+                      {DEPARTMENT_POSITIONS[addEmployeeForm.department]?.length > 0 ? (
+                        <select
+                          className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                          value={addEmployeeForm.position}
+                          onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, position: e.target.value })}
+                        >
+                          {DEPARTMENT_POSITIONS[addEmployeeForm.department].map((pos) => (
+                            <option key={pos} value={pos}>{pos}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="e.g. Software Engineer"
+                          className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500"
+                          value={addEmployeeForm.position}
+                          onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, position: e.target.value })}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Employment Type & Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Employment Type
+                      </label>
+                      <select
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                        value={addEmployeeForm.employmentType}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, employmentType: e.target.value })}
+                      >
+                        <option value="full_time">Full-time</option>
+                        <option value="part_time">Part-time</option>
+                        <option value="contract">Contract</option>
+                        <option value="intern">Intern</option>
+                        <option value="consultant">Consultant</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Employment Status
+                      </label>
+                      <select
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                        value={addEmployeeForm.status}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, status: e.target.value })}
+                      >
+                        <option value="active">Active</option>
+                        <option value="onboarding">Onboarding</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Joining Date, Reporting Manager & Location */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Joining Date
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        value={addEmployeeForm.joiningDate}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, joiningDate: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Reporting Manager
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Jane Smith"
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500"
+                        value={addEmployeeForm.reportingManager}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, reportingManager: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Work Location
+                      </label>
+                      <select
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                        value={addEmployeeForm.workLocation}
+                        onChange={(e) => setAddEmployeeForm({ ...addEmployeeForm, workLocation: e.target.value })}
+                      >
+                        <option value="Office">Office</option>
+                        <option value="Remote">Remote</option>
+                        <option value="Hybrid">Hybrid</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-xs text-emerald-300">
+                    <span className="font-semibold">Super Admin Note:</span> This creates the employee user account with pre-verified status and automatically generates the linked HRMS employee profile record.
+                  </div>
+                </div>
+
+                <div className="p-5 border-t border-gray-800 bg-gray-850 flex justify-end items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddEmployeeModal(false)}
+                    className="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addEmployeeLoading}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-all shadow-md shadow-emerald-950/30 flex items-center gap-2 cursor-pointer"
+                  >
+                    {addEmployeeLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Creating Employee...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaUserPlus className="w-4 h-4" />
+                        <span>Create Employee</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

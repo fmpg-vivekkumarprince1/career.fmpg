@@ -94,17 +94,26 @@ const Certificates = () => {
       const response = await certificateService.issueCertificate(certificateData);
       toast.success('Certificate issued successfully!');
       
-      if (certificateData.email) {
-        await certificateService.sendCertificateEmail(response.data.certificateId, {
-          recipientEmail: certificateData.email,
-          subject: `Certificate for ${certificateData.jobrole}`,
-          message: `Congratulations on completing your internship in ${certificateData.domain}!`
-        });
-        toast.success('Certificate issued and emailed successfully!');
+      try {
+        const updatedCerts = await certificateService.getAllCertificates();
+        setCertificates(updatedCerts.data);
+      } catch (fetchErr) {
+        console.warn('Failed to refresh certificates:', fetchErr);
       }
-      
-      const updatedCerts = await certificateService.getAllCertificates();
-      setCertificates(updatedCerts.data);
+
+      if (certificateData.email) {
+        try {
+          await certificateService.sendCertificateEmail(response.data.certificateId, {
+            recipientEmail: certificateData.email,
+            subject: `Certificate for ${certificateData.jobrole}`,
+            message: `Congratulations on completing your internship in ${certificateData.domain}!`
+          });
+          toast.success('Certificate issued and emailed successfully!');
+        } catch (emailErr) {
+          console.warn('Auto certificate email dispatch timed out or failed:', emailErr);
+          toast.warning('Certificate created! However, email delivery took longer than expected. You can resend it anytime from the list.');
+        }
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to issue certificate');
       console.error('Error:', err);
@@ -170,17 +179,26 @@ const Certificates = () => {
       const response = await offerLetterService.issueOfferLetter(offerData);
       toast.success('Offer letter issued successfully!');
       
-      // Send email automatically
-      if (offerData.email) {
-        await offerLetterService.sendOfferLetterEmail(response.data.offerLetterId, {
-          recipientEmail: offerData.email
-        });
-        toast.success('Offer letter issued and emailed successfully!');
+      // Refresh offer letters list immediately so the new letter is visible
+      try {
+        const updatedOfferLetters = await offerLetterService.getAllOfferLetters();
+        setOfferLetters(updatedOfferLetters.data);
+      } catch (fetchErr) {
+        console.warn('Failed to refresh offer letters list:', fetchErr);
       }
-      
-      // Refresh offer letters list
-      const updatedOfferLetters = await offerLetterService.getAllOfferLetters();
-      setOfferLetters(updatedOfferLetters.data);
+
+      // Send email automatically in an isolated try-catch so email latency/timeout never marks the creation as failed
+      if (offerData.email) {
+        try {
+          await offerLetterService.sendOfferLetterEmail(response.data.offerLetterId, {
+            recipientEmail: offerData.email
+          });
+          toast.success('Offer letter emailed successfully!');
+        } catch (emailErr) {
+          console.warn('Auto email dispatch timed out or failed:', emailErr);
+          toast.warning('Offer letter created! However, email delivery is taking longer than expected. You can resend it from the list.');
+        }
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to issue offer letter');
       console.error('Error:', err);

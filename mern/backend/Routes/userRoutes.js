@@ -10,7 +10,9 @@ const {
     bulkUpdateUserStatusFromApplications,
     deleteUser,
     updateUserRole,
-    bulkUploadEmployees
+    bulkUploadEmployees,
+    createUser,
+    createEmployee
 } = require('../Controllers/userController');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,6 +27,8 @@ router.put('/:userId/terminate', auth, hasPermission('canManageEmployees'), term
 router.put('/bulk/update-status', auth, hasPermission('canManageEmployees'), bulkUpdateUserStatusFromApplications);
 
 // Special authority (Super Admin) required routes for critical operations
+router.post('/', auth, verifySuperAdmin, createUser);
+router.post('/employee', auth, verifySuperAdmin, createEmployee);
 router.put('/:userId/role', auth, verifySuperAdmin, updateUserRole);
 router.delete('/:userId', verifySuperAdmin, deleteUser);
 

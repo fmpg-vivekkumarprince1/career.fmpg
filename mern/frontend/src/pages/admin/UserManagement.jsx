@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { userService } from '../../services/api';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
-import { FaUser, FaSearch, FaFilter, FaEdit, FaTrash, FaEye, FaUsers, FaCheck, FaBan, FaEnvelope, FaPhone, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaUser, FaSearch, FaFilter, FaEdit, FaTrash, FaEye, FaUsers, FaCheck, FaBan, FaEnvelope, FaPhone, FaChevronLeft, FaChevronRight, FaUserPlus } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
-import { ROLES, STATUS } from '../../utils/constants';
+import { ROLES, STATUS, DEPARTMENTS } from '../../utils/constants';
 
 const UserManagement = () => {
   const { isSuperAdmin } = useAuth();
@@ -26,6 +26,20 @@ const UserManagement = () => {
     status: ''
   });
   const [totalResults, setTotalResults] = useState(0);
+
+  // Add User State (Super Admin Only)
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [addUserLoading, setAddUserLoading] = useState(false);
+  const [addUserForm, setAddUserForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    role: 'user',
+    status: 'active',
+    department: '',
+    position: ''
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -91,6 +105,37 @@ const UserManagement = () => {
     }
   };
 
+  const handleCreateUser = async (e) => {
+    e?.preventDefault();
+    if (!addUserForm.name.trim() || !addUserForm.email.trim() || !addUserForm.password) {
+      toast.error('Name, email, and password are required');
+      return;
+    }
+
+    try {
+      setAddUserLoading(true);
+      await userService.createUser(addUserForm);
+      toast.success('User created successfully!');
+      setShowAddUserModal(false);
+      setAddUserForm({
+        name: '',
+        email: '',
+        password: '',
+        phoneNumber: '',
+        role: 'user',
+        status: 'active',
+        department: '',
+        position: ''
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error(error.response?.data?.message || 'Failed to create user');
+    } finally {
+      setAddUserLoading(false);
+    }
+  };
+
   const handleDeleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
@@ -126,10 +171,21 @@ const UserManagement = () => {
   return (
     <div className="ui-page">
       <div className="ui-content">
-        <div className="ui-page-header">
-          <span className="fmpg-kicker">People</span>
-          <h1 className="ui-page-title mt-3">User management</h1>
-          <p className="ui-page-subtitle">Review registered candidates, application activity, and account details.</p>
+        <div className="ui-page-header flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <span className="fmpg-kicker">People</span>
+            <h1 className="ui-page-title mt-3">User management</h1>
+            <p className="ui-page-subtitle">Review registered candidates, application activity, and account details.</p>
+          </div>
+          {isSuperAdmin && (
+            <button
+              onClick={() => setShowAddUserModal(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-all shadow-md shadow-emerald-950/20 self-start md:self-auto cursor-pointer"
+            >
+              <FaUserPlus className="w-4 h-4" />
+              <span>Add User</span>
+            </button>
+          )}
         </div>
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -375,6 +431,192 @@ const UserManagement = () => {
                 Save Changes
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add User Modal (Super Admin Only) */}
+      {isSuperAdmin && showAddUserModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <FaUserPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Add New User</h3>
+                  <p className="text-xs text-slate-400">Create a new account with customized role and credentials.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddUserModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser}>
+              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Full Name <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Alex Morgan"
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-500"
+                      value={addUserForm.name}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Email Address <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="user@example.com"
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-500"
+                      value={addUserForm.email}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Password <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Minimum 6 characters"
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-500"
+                      value={addUserForm.password}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, password: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+91 98765 43210"
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-500"
+                      value={addUserForm.phoneNumber}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, phoneNumber: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Role
+                    </label>
+                    <select
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                      value={addUserForm.role}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, role: e.target.value })}
+                    >
+                      <option value="user">User / Candidate</option>
+                      <option value="employee">Employee</option>
+                      <option value="admin">Admin</option>
+                      <option value="hr-admin">HR Admin</option>
+                      <option value="manager">Manager</option>
+                      <option value="recruiter">Recruiter</option>
+                      <option value="finance">Finance</option>
+                      <option value="payroll-admin">Payroll Admin</option>
+                      <option value="verifier">Verifier</option>
+                      <option value="super-admin">Super Admin</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Account Status
+                    </label>
+                    <select
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                      value={addUserForm.status}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, status: e.target.value })}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="suspended">Suspended</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Department (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Engineering, Sales"
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-500"
+                      value={addUserForm.department}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, department: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Position (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Senior Developer"
+                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-lg py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-500"
+                      value={addUserForm.position}
+                      onChange={(e) => setAddUserForm({ ...addUserForm, position: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-xs text-emerald-300">
+                  <span className="font-semibold">Super Admin Note:</span> The newly created account will be pre-verified and active immediately for instant login.
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-slate-800 bg-slate-900/80 flex justify-end items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addUserLoading}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-all shadow-md shadow-emerald-950/30 flex items-center gap-2"
+                >
+                  {addUserLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Creating User...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaUserPlus className="w-4 h-4" />
+                      <span>Create User</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

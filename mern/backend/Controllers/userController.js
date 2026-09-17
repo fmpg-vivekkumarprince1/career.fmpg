@@ -1,9 +1,11 @@
 const User = require("../models/user");
+const Employee = require("../models/Employee");
 const Application = require("../models/application");
 const OfferLetter = require("../models/offerLetter");
 const EmploymentContract = require("../models/offerContract");
 const Certificate = require("../models/certificate");
 const emailService = require("../services/emailService");
+const bcrypt = require("bcryptjs");
 const { ROLES, STATUS, DEPARTMENTS, DEPARTMENT_POSITIONS, POSITION_LEVELS } = require("../utils/constants");
 const { logAudit } = require("../services/auditService");
 
@@ -983,6 +985,259 @@ const bulkUploadEmployees = async (req, res) => {
     }
 };
 
+// Create single user (Super Admin only)
+const createUser = async (req, res) => {
+    try {
+        const {
+            name,
+            email,
+            password,
+            phoneNumber,
+            role = 'user',
+            status = 'active',
+            department,
+            position,
+            permissions
+        } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "Name, email, and password are required." });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email: normalizedEmail });
+        if (existingUser) {
+            return res.status(400).json({ message: "A user with this email already exists." });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Assign default permissions if not explicitly provided
+        let userPermissions = permissions || {};
+        if (role === 'admin' || role === 'super-admin') {
+            userPermissions = {
+                canGenerateCertificate: true,
+                canGenerateOfferLetter: true,
+                canCreateJob: true,
+                canManageJobs: true,
+                canViewApplicants: true,
+                canManageReviews: true,
+                canManageEmployees: true,
+                canManageRecommendations: true,
+                canAccessDashboard: true,
+                ...permissions
+            };
+        } else if (role === 'hr-admin') {
+            userPermissions = {
+                canGenerateCertificate: true,
+                canGenerateOfferLetter: true,
+                canViewApplicants: true,
+                canManageReviews: true,
+                canManageEmployees: true,
+                canManageRecommendations: true,
+                canAccessDashboard: true,
+                ...permissions
+            };
+        }
+
+        const newUser = new User({
+            name: name.trim(),
+            email: normalizedEmail,
+            phoneNumber: phoneNumber ? phoneNumber.trim() : undefined,
+            password: hashedPassword,
+            role,
+            status,
+            department: department ? department.trim() : undefined,
+            position: position ? position.trim() : undefined,
+            permissions: userPermissions,
+            isEmailVerified: true // Pre-verified since created by Super Admin
+        });
+
+        await newUser.save();
+
+        await logAudit({
+            req,
+            action: 'CREATE',
+            resourceEntity: 'User',
+            resourceId: newUser._id,
+            changes: {
+                new: {
+                    name: newUser.name,
+                    email: newUser.email,
+                    role: newUser.role,
+                    status: newUser.status,
+                    department: newUser.department,
+                    position: newUser.position
+                }
+            }
+        });
+
+        const createdUser = newUser.toObject();
+        delete createdUser.password;
+
+        res.status(201).json({
+            message: "User created successfully",
+            user: createdUser
+        });
+    } catch (error) {
+        console.error("Error creating user:", error);
+        res.status(500).json({ message: error.message || "Failed to create user" });
+    }
+};
+
+// Create single employee (Super Admin only)
+const createEmployee = async (req, res) => {
+    try {
+        const {
+            name,
+            email,
+            password,
+            phoneNumber,
+            role = 'employee',
+            status = 'active',
+            department,
+            position,
+            employeeId,
+            joiningDate,
+            employmentType = 'full_time',
+            workLocation,
+            reportingManager
+        } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "Name, email, and password are required." });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email: normalizedEmail });
+        if (existingUser) {
+            return res.status(400).json({ message: "A user with this email already exists." });
+        }
+
+        // Determine employee code
+        let finalEmployeeCode = employeeId ? employeeId.trim() : null;
+        if (finalEmployeeCode) {
+            const existingCode = await User.findOne({ employeeId: finalEmployeeCode });
+            if (existingCode) {
+                return res.status(400).json({ message: `Employee ID ${finalEmployeeCode} is already assigned to another user.` });
+            }
+        } else {
+            // Auto generate EMPxxx
+            const count = await User.countDocuments({
+                $or: [
+                    { employeeId: { $exists: true, $ne: null } },
+                    { role: { $in: ['employee', 'admin', 'super-admin', 'hr-admin', 'manager'] } }
+                ]
+            });
+            let nextNum = count + 1;
+            let candidateCode = `EMP${String(nextNum).padStart(3, '0')}`;
+            while (await User.findOne({ employeeId: candidateCode })) {
+                nextNum++;
+                candidateCode = `EMP${String(nextNum).padStart(3, '0')}`;
+            }
+            finalEmployeeCode = candidateCode;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Determine permissions for employee
+        let permissions = {};
+        if (role === 'admin' || role === 'super-admin') {
+            permissions = {
+                canGenerateCertificate: true,
+                canGenerateOfferLetter: true,
+                canCreateJob: true,
+                canManageJobs: true,
+                canViewApplicants: true,
+                canManageReviews: true,
+                canManageEmployees: true,
+                canManageRecommendations: true,
+                canAccessDashboard: true
+            };
+        } else if (role === 'hr-admin') {
+            permissions = {
+                canGenerateCertificate: true,
+                canGenerateOfferLetter: true,
+                canViewApplicants: true,
+                canManageReviews: true,
+                canManageEmployees: true,
+                canManageRecommendations: true,
+                canAccessDashboard: true
+            };
+        } else {
+            permissions = {
+                canAccessDashboard: true
+            };
+        }
+
+        const newUser = new User({
+            name: name.trim(),
+            email: normalizedEmail,
+            password: hashedPassword,
+            phoneNumber: phoneNumber ? phoneNumber.trim() : undefined,
+            role: role || 'employee',
+            status: status || 'active',
+            department: department ? department.trim() : undefined,
+            position: position ? position.trim() : undefined,
+            reportingManager: reportingManager ? reportingManager.trim() : undefined,
+            employeeId: finalEmployeeCode,
+            permissions,
+            isEmailVerified: true
+        });
+
+        await newUser.save();
+
+        // Also create/sync linked HRMS Employee record
+        let newEmployee = null;
+        try {
+            newEmployee = await Employee.create({
+                userId: newUser._id,
+                employeeCode: finalEmployeeCode,
+                employmentType: employmentType || 'full_time',
+                employmentStatus: status === 'inactive' || status === 'former' ? 'relieved' : 'active',
+                joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
+                workLocation: workLocation || 'Office'
+            });
+        } catch (empErr) {
+            console.warn("Could not create linked HRMS Employee model record:", empErr.message);
+        }
+
+        await logAudit({
+            req,
+            action: 'CREATE',
+            resourceEntity: 'Employee',
+            resourceId: newUser._id,
+            changes: {
+                new: {
+                    name: newUser.name,
+                    email: newUser.email,
+                    employeeId: finalEmployeeCode,
+                    role: newUser.role,
+                    department: newUser.department,
+                    position: newUser.position,
+                    joiningDate
+                }
+            }
+        });
+
+        const createdUser = newUser.toObject();
+        delete createdUser.password;
+
+        res.status(201).json({
+            message: "Employee created successfully",
+            user: createdUser,
+            employee: newEmployee
+        });
+    } catch (error) {
+        console.error("Error creating employee:", error);
+        res.status(500).json({ message: error.message || "Failed to create employee" });
+    }
+};
+
 module.exports = {
     getAllUsers,
     getUserById,
@@ -992,5 +1247,7 @@ module.exports = {
     terminateEmployee,
     bulkUpdateUserStatusFromApplications,
     deleteUser,
-    bulkUploadEmployees
+    bulkUploadEmployees,
+    createUser,
+    createEmployee
 };

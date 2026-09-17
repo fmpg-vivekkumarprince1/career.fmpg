@@ -53,13 +53,18 @@ exports.register = async (req, res) => {
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        // Send verification email
+        // Send verification email with a safety timeout race so client never hangs
         try {
-            await emailService.sendEmailVerificationOTP(normalizedEmail, otp, name.trim());
+            const emailPromise = emailService.sendEmailVerificationOTP(normalizedEmail, otp, name.trim());
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Verification email dispatch took longer than 6s")), 6000)
+            );
+            await Promise.race([emailPromise, timeoutPromise]);
             console.log(`Verification email sent to: ${normalizedEmail}`);
         } catch (emailError) {
-            console.error("Failed to send verification email:", emailError.message || emailError);
-            // Don't fail registration if email fails
+            console.warn("Notice: Verification email dispatch warning (account pending created successfully):", emailError.message || emailError);
+            // Non-blocking: Account registration is already secured in PendingRegistration!
+            // User will be prompted on /verify-email where they can enter the code or click resend.
         }
 
         res.status(201).json({

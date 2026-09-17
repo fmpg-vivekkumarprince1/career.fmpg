@@ -9,7 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 10000 // 10 second timeout
+  timeout: 60000 // 60 second timeout to accommodate PDF generation, email dispatch, and serverless cold starts
 });
 
 // Create a separate instance for file uploads with longer timeout
@@ -49,6 +49,22 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Gracefully handle request timeouts
+    if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
+      console.warn('API Timeout Warning:', error.config?.url, error.message);
+      const timeoutError = new Error('The request timed out. The server is taking longer than usual to complete the operation. Please try again.');
+      timeoutError.code = 'ETIMEDOUT';
+      timeoutError.isTimeout = true;
+      timeoutError.config = error.config;
+      timeoutError.response = {
+        status: 408,
+        data: {
+          message: 'The request timed out on the server. If an email was being dispatched, it may still be processing in the background.'
+        }
+      };
+      return Promise.reject(timeoutError);
+    }
+
     console.error('API Error:', error.config?.url, error.response?.status, error.response?.data);
     
     // Handle session expiry or unauthorized access
@@ -420,7 +436,7 @@ export const offerLetterService = {
   updateOfferLetterStatus: (id, status) => api.patch(`/api/certification/offer-letters/${id}/status`, { status }),
   verifyOfferLetter: (id) => api.get(`/api/certification/verify-offer/${encodeURIComponent(String(id).trim())}`),
   extendOfferLetter: (id, extensionData) => api.patch(`/api/certification/offer-letters/${id}/extend`, extensionData),
-  sendOfferLetterEmail: (id, emailData) => api.post(`/api/certification/offer-letters/${id}/send-email`, emailData),
+  sendOfferLetterEmail: (id, emailData) => api.post(`/api/certification/offer-letters/${id}/send-email`, emailData, { timeout: 60000 }),
   deleteOfferLetter: (id) => api.delete(`/api/certification/offer-letters/${id}`),
   
   // Download offer letter as a blob
@@ -545,6 +561,8 @@ export const userService = {
     return api.get(`/api/users?${queryString}`);
   },
   getUserById: (id) => api.get(`/api/users/${id}`),
+  createUser: (userData) => api.post('/api/users', userData),
+  createEmployee: (employeeData) => api.post('/api/users/employee', employeeData),
   updateUserStatus: (id, userData) => api.put(`/api/users/${id}/status`, userData),
   terminateEmployee: (id, terminationData = {}) => api.put(`/api/users/${id}/terminate`, terminationData),
   updateUserRole: (id, roleData) => api.put(`/api/users/${id}/role`, roleData),
