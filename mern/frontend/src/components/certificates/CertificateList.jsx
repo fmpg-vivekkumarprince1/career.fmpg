@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { certificateService } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import Loader from '../common/Loader';
+import ConfirmationModal from '../common/ConfirmationModal';
 
-const CertificateList = ({ certificates, loading, onEmailCertificate }) => {
+const CertificateList = ({ certificates, loading, onEmailCertificate, onDeleteCertificate }) => {
+  const { isSuperAdmin } = useAuth();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [certToDelete, setCertToDelete] = useState(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailData, setEmailData] = useState({ id: '', email: '' });
   const [emailLoading, setEmailLoading] = useState(false);
@@ -136,7 +141,7 @@ const CertificateList = ({ certificates, loading, onEmailCertificate }) => {
                 <tbody className="divide-y divide-gray-700">
                   {certificates.map((cert) => (
                     <tr key={cert._id} className="hover:bg-gray-800/50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-lime-400">OM-{cert._id.toString().substring(0, 8)}...</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-lime-400">FMPG-{cert._id.toString().substring(0, 8)}...</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{cert.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{cert.domain}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{cert.jobrole}</td>
@@ -165,6 +170,18 @@ const CertificateList = ({ certificates, loading, onEmailCertificate }) => {
                           >
                             Verify
                           </button>
+                          {isSuperAdmin && (
+                            <button
+                              className="px-3 py-1 bg-transparent border border-red-600/40 hover:border-red-500 text-red-400 hover:bg-red-900/30 text-xs font-medium rounded transition-colors flex items-center"
+                              onClick={() => {
+                                setCertToDelete(cert);
+                                setShowDeleteModal(true);
+                              }}
+                              title="Delete Certificate (Super Admin)"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -316,6 +333,27 @@ const CertificateList = ({ certificates, loading, onEmailCertificate }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setCertToDelete(null);
+        }}
+        onConfirm={async () => {
+          if (certToDelete && onDeleteCertificate) {
+            await onDeleteCertificate(certToDelete._id);
+          }
+          setShowDeleteModal(false);
+          setCertToDelete(null);
+        }}
+        title="Delete Certificate"
+        message={`Are you sure you want to delete the certificate for "${certToDelete?.name}" (${certToDelete?.jobrole})? This action cannot be undone.`}
+        confirmText="Delete Certificate"
+        cancelText="Cancel"
+        type="danger"
+      />
     </>
   );
 };

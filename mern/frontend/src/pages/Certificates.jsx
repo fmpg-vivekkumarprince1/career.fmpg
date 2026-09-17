@@ -135,6 +135,34 @@ const Certificates = () => {
     }
   };
 
+  const handleDeleteCertificate = async (id) => {
+    try {
+      setLoading(true);
+      await certificateService.deleteCertificate(id);
+      toast.success('Certificate deleted successfully');
+      setCertificates(prev => prev.filter(c => c._id !== id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete certificate');
+      console.error('Error deleting certificate:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteOfferLetter = async (id) => {
+    try {
+      setLoading(true);
+      await offerLetterService.deleteOfferLetter(id);
+      toast.success('Offer letter deleted successfully');
+      setOfferLetters(prev => prev.filter(o => o._id !== id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete offer letter');
+      console.error('Error deleting offer letter:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOfferLetterGeneration = async (offerData) => {
     setLoading(true);
     
@@ -327,7 +355,12 @@ const Certificates = () => {
         )}
         
         {!loading && activeTab === 'all' && (
-          <CertificateList certificates={certificates} loading={loading} onEmailCertificate={handleEmailCertificate} />
+          <CertificateList 
+            certificates={certificates} 
+            loading={loading} 
+            onEmailCertificate={handleEmailCertificate}
+            onDeleteCertificate={handleDeleteCertificate}
+          />
         )}
         
         {!loading && activeTab === 'alloffers' && (
@@ -338,6 +371,7 @@ const Certificates = () => {
             onSendEmail={handleSendOfferLetterEmail}
             onUpdateStatus={handleUpdateOfferLetterStatus}
             onExtend={handleExtendOfferLetter}
+            onDeleteOfferLetter={handleDeleteOfferLetter}
             currentUser={currentUser}
             autoOpenExtendEmail={actionParam === 'extend' ? emailParam : ''}
             filterEmail={emailParam}

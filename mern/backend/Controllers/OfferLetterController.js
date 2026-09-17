@@ -27,8 +27,8 @@ try {
 }
 
 function normalizeOfferLetterLookupId(rawId = "") {
-    // Cleans prefixes like FMPG- or FMPG-OFF-
-    return String(rawId).trim().replace(/^(FMPG-OFF-|FMPG-)/i, "");
+    // Cleans prefixes like FMPG-OFF-, FMPG-, OM-OFF-, OM-
+    return String(rawId).trim().replace(/^(FMPG-OFF-|FMPG-|OM-OFF-|OM-)/i, "");
 }
 
 async function findOfferLetterByIdentifier(identifier, populate = "userId") {
@@ -62,13 +62,10 @@ async function findOfferLetterByIdentifier(identifier, populate = "userId") {
 }
 
 // Email setup
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+const { sendMail } = require("../config/emailTransporter");
+const transporter = {
+    sendMail: (options) => sendMail(options)
+};
 
 exports.issueOfferLetter = async (req, res) => {
     console.log("OfferLetter: new");
@@ -1332,4 +1329,39 @@ exports.downloadOfferSampleCSV = async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="offer_letter_bulk_sample.csv"');
     res.status(200).send(headers + sampleRow);
+};
+
+// Delete offer letter - Super Admin only
+exports.deleteOfferLetter = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const offerLetter = await findOfferLetterByIdentifier(id, null);
+        if (!offerLetter) {
+            return res.status(404).json({ message: "Offer letter not found" });
+        }
+
+        await OfferLetter.deleteOne({ _id: offerLetter._id });
+
+        // Log audit trail
+        await logAudit({
+            req,
+            action: "DELETE",
+            resourceEntity: "OfferLetter",
+            resourceId: offerLetter._id,
+            changes: {
+                deletedOfferLetter: {
+                    candidateName: offerLetter.candidateName,
+                    email: offerLetter.email,
+                    position: offerLetter.position,
+                    department: offerLetter.department,
+                    status: offerLetter.status
+                }
+            }
+        });
+
+        res.status(200).json({ message: "Offer letter deleted successfully", offerLetterId: offerLetter._id });
+    } catch (error) {
+        console.error("Delete offer letter error:", error);
+        res.status(500).json({ message: "Server error deleting offer letter", error: error.message });
+    }
 };

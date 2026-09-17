@@ -44,13 +44,10 @@ const findApplicationByIdentifier = async (identifier, populate = null, lean = t
 };
 
 // Email setup
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const { sendMail } = require("../config/emailTransporter");
+const transporter = {
+  sendMail: (options) => sendMail(options),
+};
 
 // User application
 exports.createApplication = async (req, res) => {

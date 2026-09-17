@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const CertificationController = require("../Controllers/CertificateController");
 const OfferLetterController = require("../Controllers/OfferLetterController");
-const { auth, hasPermission, isHR } = require("../middleware/authMiddleware")
+const { auth, hasPermission, isHR, verifySuperAdmin } = require("../middleware/authMiddleware");
 
 // Certificate routes
 router.post("/issue", auth, hasPermission('canGenerateCertificate'), CertificationController.issue);
@@ -10,6 +10,7 @@ router.get("/verify/:id", CertificationController.verifyCertificate);
 router.get("/", auth, isHR, CertificationController.getAllCertificates);
 router.get("/download/:id", CertificationController.downloadCertificate);
 router.post("/:id/send-email", auth, hasPermission('canGenerateCertificate'), CertificationController.sendCertificateEmail);
+router.delete("/:id", auth, verifySuperAdmin, CertificationController.deleteCertificate);
 
 const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
@@ -27,5 +28,6 @@ router.get("/offer-letters/:id/download", auth, OfferLetterController.downloadOf
 router.post("/offer-letters/:id/send-email", auth, hasPermission('canGenerateOfferLetter'), OfferLetterController.sendOfferLetterEmail);
 router.post("/offer-letters/:id/regenerate-token", auth, hasPermission('canGenerateOfferLetter'), OfferLetterController.regenerateAcceptanceToken);
 router.post("/offer-letters/add-tokens", auth, hasPermission('canGenerateOfferLetter'), OfferLetterController.addAcceptanceTokensToExisting);
+router.delete("/offer-letters/:id", auth, verifySuperAdmin, OfferLetterController.deleteOfferLetter);
 
 module.exports = router;

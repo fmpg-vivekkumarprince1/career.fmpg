@@ -274,10 +274,23 @@ const isEmployeeOnly = (req, res, next) => {
     next();
 };
 
-// Middleware to verify user is Super Admin (for critical operations like changing roles and deleting users)
+// Middleware to verify user is Super Admin (for critical operations like changing roles and deleting records)
 const verifySuperAdmin = async (req, res, next) => {
     authLog("SuperAdmin: processing");
     try {
+        // If auth middleware already populated req.user
+        if (req.user) {
+            const role = (req.user.role || '').toLowerCase();
+            if (role === ROLES.SUPER_ADMIN) {
+                authLog("SuperAdmin: granted via req.user");
+                return next();
+            }
+            authLog("SuperAdmin: access denied - not super-admin");
+            return res.status(403).json({
+                message: "Access denied. Super Admin role required for this operation."
+            });
+        }
+
         const token = req.header("Authorization")?.split(" ")[1];
         if (!token) {
             authLog("SuperAdmin: no token");
@@ -295,7 +308,8 @@ const verifySuperAdmin = async (req, res, next) => {
         }
 
         // Check if user has super-admin role
-        if (user.role !== ROLES.SUPER_ADMIN) {
+        const role = (user.role || '').toLowerCase();
+        if (role !== ROLES.SUPER_ADMIN) {
             authLog("SuperAdmin: access denied - not super-admin");
             return res.status(403).json({
                 message: "Access denied. Super Admin role required for this operation."
@@ -303,7 +317,10 @@ const verifySuperAdmin = async (req, res, next) => {
         }
 
         authLog("SuperAdmin: granted");
-        req.user = user;
+        req.user = {
+            ...user.toObject(),
+            userId: user._id.toString()
+        };
         next();
     } catch (error) {
         console.error("SuperAdmin: error:", error.message);

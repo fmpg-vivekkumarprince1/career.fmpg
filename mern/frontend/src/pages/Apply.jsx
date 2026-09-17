@@ -5,10 +5,11 @@ import ReCAPTCHA from 'react-google-recaptcha';
 import { motion, AnimatePresence } from 'framer-motion';
 import { jobService, applicationService } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { ArrowLeft, MapPin, Briefcase, ChevronRight, Check, Upload, AlertCircle, Sparkles, FileText, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Briefcase, ChevronRight, Check, Upload, AlertCircle, Sparkles, FileText, CheckCircle, Share2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Loader from '../components/common/Loader';
 import JobQuestionAnswer from '../components/JobQuestionAnswer';
+import ShareJobModal from '../components/common/ShareJobModal';
 import { formatCurrencyValue } from '../utils/currencyUtils';
 
 const FADE_VARIANTS = {
@@ -46,6 +47,7 @@ const Apply = () => {
   const [, setParseError] = useState('');
   const [, setParseSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 1024);
 
   useEffect(() => {
@@ -67,12 +69,7 @@ const Apply = () => {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login', { state: { from: `/apply/${slug}` } });
-      return;
-    }
-
-    const userIdentity = currentUser?._id || currentUser?.email || 'unknown-user';
+    const userIdentity = currentUser?._id || currentUser?.email || 'guest-user';
     const fetchKey = `${slug}:${userIdentity}`;
     if (lastFetchKeyRef.current === fetchKey) {
       return;
@@ -89,11 +86,11 @@ const Apply = () => {
         setJob(fetchedJob);
         const actualJobId = fetchedJob._id;
 
-        if (currentUser.email) {
+        if (currentUser?.email) {
           setFormData(prev => ({ ...prev, email: currentUser.email }));
         }
 
-        if (currentUser.name) {
+        if (currentUser?.name) {
           setFormData(prev => ({ ...prev, fullName: currentUser.name }));
         }
 
@@ -120,14 +117,16 @@ const Apply = () => {
         }
 
         // Check if user has already applied for this job
-        try {
-          const statusResponse = await applicationService.checkApplicationStatus(actualJobId);
-          if (!isActive) return;
-          if (statusResponse.data.hasApplied) {
-            setExistingApplication(statusResponse.data);
+        if (currentUser) {
+          try {
+            const statusResponse = await applicationService.checkApplicationStatus(actualJobId);
+            if (!isActive) return;
+            if (statusResponse.data.hasApplied) {
+              setExistingApplication(statusResponse.data);
+            }
+          } catch (err) {
+            console.error("Error checking application status:", err);
           }
-        } catch (err) {
-          console.error("Error checking application status:", err);
         }
       } catch (err) {
         setError(err.response?.data?.message || 'Error loading job details');
@@ -142,7 +141,7 @@ const Apply = () => {
     return () => {
       isActive = false;
     };
-  }, [slug, currentUser?._id, currentUser?.email, navigate]);
+  }, [slug, currentUser?._id, currentUser?.email]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -296,6 +295,11 @@ const Apply = () => {
   };
 
   const nextStep = () => {
+    if (currentStep === 1 && !currentUser) {
+      toast.info('Please sign in or create an account to start your application.');
+      navigate('/login', { state: { from: `/apply/${slug}` } });
+      return;
+    }
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, totalSteps));
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -476,21 +480,42 @@ const Apply = () => {
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-100/60 rounded-full blur-[120px]" />
       </div>
       <Helmet>
-        <title>{`Apply for ${job.title} at FMPG`}</title>
-        <meta name="description" content={`Apply for the ${job.title} position at FMPG. Join our team building the future.`} />
+        <title>{`Apply for ${job.title} at ${job.company || 'FMPG'}`}</title>
+        <meta name="description" content={job.description ? job.description.slice(0, 160) : `Apply for the ${job.title} position at FMPG. Join our team building the future.`} />
+        {/* Open Graph / Social Sharing */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={`${job.title} at ${job.company || 'FMPG'}`} />
+        <meta property="og:description" content={job.description ? job.description.slice(0, 160) : `Explore the ${job.title} role at ${job.company || 'FMPG'}. Apply today!`} />
+        <meta property="og:url" content={typeof window !== 'undefined' ? `${window.location.origin}/apply/${job.slug || job._id}` : ''} />
+        {job.imageUrl && <meta property="og:image" content={job.imageUrl} />}
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${job.title} at ${job.company || 'FMPG'}`} />
+        <meta name="twitter:description" content={job.description ? job.description.slice(0, 160) : `Explore the ${job.title} role at ${job.company || 'FMPG'}.`} />
       </Helmet>
 
       <div className="max-w-4xl mx-auto">
         {/* Header Section */}
         {currentStep === 1 && (
           <div className="mb-12">
-            <Link 
-              to="/jobs" 
-              className="inline-flex items-center text-sm font-semibold text-slate-500 hover:text-emerald-700 transition-colors mb-6 group"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2 transform group-hover:-translate-x-1 transition-transform" />
-              Back to All Openings
-            </Link>
+            <div className="flex items-center justify-between mb-6">
+              <Link 
+                to="/jobs" 
+                className="inline-flex items-center text-sm font-semibold text-slate-500 hover:text-emerald-700 transition-colors group"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2 transform group-hover:-translate-x-1 transition-transform" />
+                Back to All Openings
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 font-semibold text-xs sm:text-sm transition-all shadow-sm group"
+                title="Share this job"
+              >
+                <Share2 className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                <span>Share Job</span>
+              </button>
+            </div>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
                 <h1 className="ui-page-title mb-6">
@@ -818,12 +843,19 @@ const Apply = () => {
                 disabled={submitting}
                 className="bg-gradient-to-r from-lime-400 to-green-500 hover:from-lime-500 hover:to-green-600 text-black font-black uppercase tracking-[0.1em] px-12 py-5 rounded-2xl transition-all shadow-xl shadow-lime-400/10 hover:shadow-lime-400/30 transform hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {currentStep === totalSteps ? (submitting ? 'Submitting...' : 'Submit Application') : 'Continue'}
+                {currentStep === totalSteps ? (submitting ? 'Submitting...' : 'Submit Application') : (currentStep === 1 && !currentUser ? 'Sign in to Apply' : 'Continue')}
               </button>
             </div>
           </form>
         </div>
         {submitting && <div className="mt-5 flex justify-end"><Loader inline size="sm" text="Submitting application…" /></div>}
+
+        {/* Share Job Modal */}
+        <ShareJobModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          job={job}
+        />
       </div>
     </div>
   );

@@ -103,14 +103,14 @@ const VerifyForm = ({ certificateId: propCertificateId }) => {
             <input
               id="certificateId"
               type="text"
-              placeholder="Enter certificate ID, with or without OM prefix"
+              placeholder="Enter certificate ID, with or without FMPG prefix"
               value={certificateId}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 bg-gray-800 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent"
             />
             <p className="mt-2 text-sm text-gray-400">
-              Example: <span className="text-gray-300">OM-123...</span> or <span className="text-gray-300">123...</span>
+              Example: <span className="text-gray-300">FMPG-123...</span> or <span className="text-gray-300">123...</span>
             </p>
           </div>
           <button 
@@ -140,6 +140,10 @@ const VerifyForm = ({ certificateId: propCertificateId }) => {
             </div>
             <div className="p-4 bg-secondary-black/50">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-y-3">
+                <div className="text-gray-400 font-medium md:col-span-1">Certificate ID:</div>
+                <div className="text-lime-400 font-mono font-bold md:col-span-3">FMPG-{certificate._id}</div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-y-3 mt-3">
                 <div className="text-gray-400 font-medium md:col-span-1">Name:</div>
                 <div className="text-white md:col-span-3">{certificate.name}</div>
               </div>

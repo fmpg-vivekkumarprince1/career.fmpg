@@ -1,16 +1,12 @@
-const nodemailer = require('nodemailer');
 const templates = require('../utils/emailTemplates');
+const { sendMail } = require('../config/emailTransporter');
 require('dotenv').config();
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+const transporter = {
+  sendMail: (options) => sendMail(options)
+};
 
-console.log("Email service initialized with modern templates");
+console.log("Email service initialized with centralized emailTransporter and templates");
 
 exports.sendOfferLetter = async (application, jobDetails, offerLetterPdf, acceptanceLink, validUntil, hrContact) => {
   try {
@@ -133,6 +129,9 @@ exports.sendContractSubmissionConfirmation = async (contractDetails) => {
 };
 
 exports.sendEmailVerificationOTP = async (email, otp, name) => {
+  console.log(`\n==============================================`);
+  console.log(`[OTP DISPATCH] Recipient: ${email} | Code: ${otp}`);
+  console.log(`==============================================\n`);
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -144,12 +143,15 @@ exports.sendEmailVerificationOTP = async (email, otp, name) => {
     
     return await transporter.sendMail(mailOptions);
   } catch (error) {
-    console.error('Failed to send verification OTP:', error);
+    console.error('Failed to send verification OTP:', error.message || error);
     throw error;
   }
 };
 
 exports.sendPasswordResetOTP = async (email, otp, name) => {
+  console.log(`\n==============================================`);
+  console.log(`[RESET OTP DISPATCH] Recipient: ${email} | Code: ${otp}`);
+  console.log(`==============================================\n`);
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -161,7 +163,7 @@ exports.sendPasswordResetOTP = async (email, otp, name) => {
     
     return await transporter.sendMail(mailOptions);
   } catch (error) {
-    console.error('Failed to send password reset OTP:', error);
+    console.error('Failed to send password reset OTP:', error.message || error);
     throw error;
   }
 };

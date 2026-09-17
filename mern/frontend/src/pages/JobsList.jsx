@@ -6,14 +6,16 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getImageUrl, getFirstLetterFallback } from '../utils/imageUtils';
 import { formatCurrencyValue } from '../utils/currencyUtils';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import ShareJobModal from '../components/common/ShareJobModal';
 import { setCache, getCache } from '../utils/cache';
 import { toast } from 'react-toastify';
+import { Share2 } from 'lucide-react';
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const { currentUser, isAdmin, isHR } = useAuth();
+  const { currentUser, isAdmin, isHR, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [animateList, setAnimateList] = useState(false);
@@ -30,6 +32,7 @@ const Jobs = () => {
   // States for confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [jobToDelete, setJobToDelete] = useState(null);
+  const [sharingJob, setSharingJob] = useState(null);
   const [publicationUpdatingId, setPublicationUpdatingId] = useState(null);
   const canManageJobs = isAdmin || (isHR && currentUser?.permissions?.canManageJobs === true);
   const jobsCacheKey = currentUser?._id ? `jobs:${currentUser._id}` : 'jobs:public';
@@ -613,9 +616,36 @@ const Jobs = () => {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSharingJob(job);
+                        }}
+                        className="p-2.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all border border-slate-200 hover:border-emerald-300 flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+                        title="Share this job"
+                        aria-label={`Share ${job.title}`}
+                      >
+                        <Share2 className="w-4 h-4 text-emerald-600" />
+                        <span className="hidden sm:inline">Share</span>
+                      </button>
                       {currentUser && currentUser.role === 'user' && (
                         <div className="hidden md:block">
                           {renderApplyButton(job, true)}
+                        </div>
+                      )}
+                      {!currentUser && (
+                        <div className="hidden md:block">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApply(job);
+                            }}
+                            className="fmpg-primary-button px-4 py-2 text-sm"
+                          >
+                            View & Apply
+                          </button>
                         </div>
                       )}
                       {currentUser && canManageJobs && (isAdmin || currentUser.assignedJobs?.some(j => (j._id || j) === job._id)) && (
@@ -657,14 +687,14 @@ const Jobs = () => {
                             </svg>
                             <span className="hidden sm:inline ml-1">Edit</span>
                           </button>
-                          {isAdmin && (
+                          {isSuperAdmin && (
                             <button
                               className="bg-red-900/80 hover:bg-red-800 text-white px-3 py-2 rounded-lg transition duration-300 ease-in-out flex items-center gap-1 hover:shadow-md"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDelete(job._id);
                               }}
-                              title="Delete job"
+                              title="Delete job (Super Admin)"
                             >
                               <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -677,14 +707,39 @@ const Jobs = () => {
                     </div>
                   </div>
 
-                  {/* Mobile bottom section with full-width apply button */}
-                  <div className="md:hidden border-t border-gray-700/50 px-5 py-4">
+                  {/* Mobile bottom section with share & apply buttons */}
+                  <div className="md:hidden border-t border-slate-100 px-5 py-4">
                     <div className="flex flex-col gap-3">
-                      {currentUser && currentUser.role === 'user' && (
-                        <div className="w-full">
-                          {renderApplyButton(job, false)}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSharingJob(job);
+                          }}
+                          className="flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 font-semibold text-xs transition-all shadow-sm flex-1"
+                          title="Share job"
+                        >
+                          <Share2 className="w-4 h-4 text-emerald-600" />
+                          <span>Share</span>
+                        </button>
+                        {currentUser && currentUser.role === 'user' ? (
+                          <div className="flex-[2]">
+                            {renderApplyButton(job, true)}
+                          </div>
+                        ) : !currentUser ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApply(job);
+                            }}
+                            className="fmpg-primary-button py-2.5 px-4 text-xs font-bold flex-[2]"
+                          >
+                            View & Apply
+                          </button>
+                        ) : null}
+                      </div>
                       {currentUser && canManageJobs && (isAdmin || currentUser.assignedJobs?.some(j => (j._id || j) === job._id)) && (
                         <div className="flex gap-2 justify-center">
                           <button
@@ -723,14 +778,14 @@ const Jobs = () => {
                             </svg>
                             <span className="ml-1">Edit</span>
                           </button>
-                          {isAdmin && (
+                          {isSuperAdmin && (
                             <button
                               className="bg-red-900/80 hover:bg-red-800 text-white px-4 py-2 rounded-lg transition duration-300 ease-in-out flex items-center gap-1 hover:shadow-md flex-1"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDelete(job._id);
                               }}
-                              title="Delete job"
+                              title="Delete job (Super Admin)"
                             >
                               <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -787,6 +842,13 @@ const Jobs = () => {
         confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
         cancelButtonClass="bg-gray-600 hover:bg-gray-700 text-white"
         type="danger"
+      />
+
+      {/* Share Job Modal */}
+      <ShareJobModal
+        isOpen={Boolean(sharingJob)}
+        onClose={() => setSharingJob(null)}
+        job={sharingJob}
       />
       {/* Mobile Filter Modal - Premium Glassmorphism */}
       {showFilters && (

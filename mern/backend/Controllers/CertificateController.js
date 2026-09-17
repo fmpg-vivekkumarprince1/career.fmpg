@@ -10,7 +10,7 @@ const PDFDocument = require("pdfkit");
 const nodemailer = require("nodemailer");
 
 function normalizeCertificateLookupId(rawCertificateId = "") {
-    const normalizedCertificateId = String(rawCertificateId).trim().replace(/^FMPG[-\s]*/i, "");
+    const normalizedCertificateId = String(rawCertificateId).trim().replace(/^(FMPG)[-\s]*/i, "");
     return normalizedCertificateId;
 }
 
@@ -31,13 +31,10 @@ function resolveBackendAssetPath(...segments) {
 }
 
 // Email setup
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+const { sendMail } = require("../config/emailTransporter");
+const transporter = {
+    sendMail: (options) => sendMail(options)
+};
 
 exports.issue = async (req, res) => {
     console.log("Cert: new");
@@ -717,5 +714,50 @@ exports.cleanupOldPDFs = async () => {
         console.log('PDF cleanup completed');
     } catch (error) {
         console.error('Error during PDF cleanup:', error);
+    }
+};
+
+// Delete certificate - Super Admin only
+exports.deleteCertificate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const normalizedId = normalizeCertificateLookupId(id);
+
+        let query = {};
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            query = { _id: id };
+        } else if (mongoose.Types.ObjectId.isValid(normalizedId)) {
+            query = { _id: normalizedId };
+        } else {
+            return res.status(400).json({ message: "Invalid certificate ID format" });
+        }
+
+        const certificate = await Certificate.findOne(query);
+        if (!certificate) {
+            return res.status(404).json({ message: "Certificate not found" });
+        }
+
+        await Certificate.deleteOne({ _id: certificate._id });
+
+        // Log audit trail
+        await logAudit({
+            req,
+            action: "DELETE",
+            resourceEntity: "Certificate",
+            resourceId: certificate._id,
+            changes: {
+                deletedCertificate: {
+                    name: certificate.name,
+                    domain: certificate.domain,
+                    jobrole: certificate.jobrole,
+                    recipientEmail: certificate.recipientEmail
+                }
+            }
+        });
+
+        res.status(200).json({ message: "Certificate deleted successfully", certificateId: certificate._id });
+    } catch (error) {
+        console.error("Delete certificate error:", error);
+        res.status(500).json({ message: "Server error deleting certificate", error: error.message });
     }
 };

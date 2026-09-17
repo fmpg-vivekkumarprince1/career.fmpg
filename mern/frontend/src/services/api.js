@@ -421,6 +421,7 @@ export const offerLetterService = {
   verifyOfferLetter: (id) => api.get(`/api/certification/verify-offer/${encodeURIComponent(String(id).trim())}`),
   extendOfferLetter: (id, extensionData) => api.patch(`/api/certification/offer-letters/${id}/extend`, extensionData),
   sendOfferLetterEmail: (id, emailData) => api.post(`/api/certification/offer-letters/${id}/send-email`, emailData),
+  deleteOfferLetter: (id) => api.delete(`/api/certification/offer-letters/${id}`),
   
   // Download offer letter as a blob
   downloadOfferLetter: (id) => {

@@ -103,7 +103,7 @@ const VerifyOfferLetterForm = ({ offerId: propOfferId }) => {
             <input
               id="offerId"
               type="text"
-              placeholder="Enter offer letter ID"
+              placeholder="Enter offer letter ID (e.g. FMPG-OFF-...)"
               value={offerId}
               onChange={handleChange}
               required
@@ -140,6 +140,12 @@ const VerifyOfferLetterForm = ({ offerId: propOfferId }) => {
             </div>
             <div className="p-4 bg-secondary-black/50">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-y-3">
+                <div className="text-gray-400 font-medium md:col-span-1">Reference ID:</div>
+                <div className="text-lime-400 font-mono font-bold md:col-span-3">
+                  FMPG-OFF-{offer.shortId || offer._id.toString().slice(-6).toUpperCase()}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-y-3 mt-3">
                 <div className="text-gray-400 font-medium md:col-span-1">Candidate:</div>
                 <div className="text-white md:col-span-3 font-semibold">{offer.candidateName}</div>
               </div>

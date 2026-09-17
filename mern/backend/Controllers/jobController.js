@@ -445,15 +445,34 @@ exports.deleteJob = async (req, res) => {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    const job = await Job.findByIdAndUpdate(
-      existingJob._id,
-      { isActive: false },
-      { new: true }
-    );
+    // Clean up associated Cloudinary image if present
+    if (existingJob.image) {
+      try {
+        const publicId = extractPublicId(existingJob.image);
+        if (publicId) {
+          await deleteImage(publicId);
+        }
+      } catch (imgErr) {
+        console.error("Failed to delete job image from Cloudinary:", imgErr.message);
+      }
+    }
 
-    if (!job) {
+    // Permanently remove from database
+    const deletedJob = await Job.findByIdAndDelete(existingJob._id);
+    if (!deletedJob) {
       console.log(`Not found: ${req.params.id}`);
       return res.status(404).json({ message: "Job not found" });
+    }
+
+    // Remove from assignedJobs on users
+    try {
+      const User = require("../models/user");
+      await User.updateMany(
+        { assignedJobs: existingJob._id },
+        { $pull: { assignedJobs: existingJob._id } }
+      );
+    } catch (unassignErr) {
+      console.error("Failed to unassign job from users:", unassignErr.message);
     }
 
     // Log the delete action
@@ -461,14 +480,17 @@ exports.deleteJob = async (req, res) => {
       req,
       action: "DELETE",
       resourceEntity: "Job",
-      resourceId: job._id,
+      resourceId: existingJob._id,
       changes: {
-        oldData: { isActive: true },
-        newData: { isActive: false }
+        deletedData: {
+          title: existingJob.title,
+          company: existingJob.company,
+          department: existingJob.department
+        }
       }
     });
 
-    console.log(`Deactivated: ${job.title}`);
+    console.log(`Permanently deleted job: ${existingJob.title} (${existingJob._id})`);
     res.status(200).json({
       message: "Job deleted successfully"
     });

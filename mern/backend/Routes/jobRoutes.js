@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const jobController = require("../Controllers/jobController");
-const { auth, optionalAuth, isHR, hasPermission, checkJobAssignment } = require("../middleware/authMiddleware");
+const { auth, optionalAuth, isHR, hasPermission, checkJobAssignment, verifySuperAdmin } = require("../middleware/authMiddleware");
 const multer = require("multer");
 const path = require("path");
 const { uploadImage, deleteImage, extractPublicId } = require('../config/cloudinary');
@@ -35,7 +35,7 @@ router.get("/:jobId/questions", optionalAuth, jobController.getJobQuestions);
 // Admin/HR routes
 router.post("/", auth, hasPermission('canCreateJob'), hasPermission('canManageJobs'), jobImageUpload.single('image'), jobController.createJob);
 router.put("/:id", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobImageUpload.single('image'), jobController.updateJob);
-router.delete("/:id", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobController.deleteJob);
+router.delete("/:id", auth, verifySuperAdmin, jobController.deleteJob);
 
 // Admin/HR routes for question management
 router.post("/:jobId/questions", auth, isHR, hasPermission('canManageJobs'), checkJobAssignment, jobController.addJobQuestion);

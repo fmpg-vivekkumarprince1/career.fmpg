@@ -14,10 +14,13 @@ const getEmailCredentials = () => {
     ""
   ).trim();
 
-  const rawPassword =
+  let rawPassword =
     process.env.EMAIL_PASS || process.env.MAIL_PASS || process.env.SMTP_PASS || "";
 
-  const isGmailUser = /@gmail\.com$/i.test(user);
+  // Strip surrounding quotes if present
+  rawPassword = rawPassword.replace(/^["']|["']$/g, "").trim();
+
+  const isGmailUser = /@gmail\.com$/i.test(user) || process.env.MAIL_SERVICE === "gmail";
   const pass = isGmailUser
     ? rawPassword.replace(/\s+/g, "").trim()
     : rawPassword.trim();
@@ -54,25 +57,41 @@ const buildMailAuthError = (error) => {
   }
 
   const wrappedError = new Error(
-    "Email authentication failed. Use a valid sender account and set EMAIL_PASS to a Google App Password (16 characters, no spaces) when using Gmail."
+    "Gmail SMTP Authentication Failed (535 Bad Credentials). Ensure 2-Step Verification is active on Google and generate a new 16-character App Password at https://myaccount.google.com/apppasswords."
   );
 
-  wrappedError.code = error.code;
-  wrappedError.responseCode = error.responseCode;
+  wrappedError.code = error.code || "EAUTH";
+  wrappedError.responseCode = error.responseCode || 535;
   wrappedError.command = error.command;
   wrappedError.cause = error;
 
   return wrappedError;
 };
 
-const emailTransporter = createTransporter();
+let cachedTransporter = null;
+let lastUser = null;
+let lastPass = null;
+
+const getTransporter = () => {
+  const { user, pass } = getEmailCredentials();
+  if (!cachedTransporter || user !== lastUser || pass !== lastPass) {
+    cachedTransporter = createTransporter();
+    lastUser = user;
+    lastPass = pass;
+  }
+  return cachedTransporter;
+};
 
 const sendMail = async (mailOptions) => {
+  const transporter = getTransporter();
   try {
     if (!mailOptions.replyTo) {
       mailOptions.replyTo = process.env.REPLY_TO_EMAIL || process.env.EMAIL_USER;
     }
-    return await emailTransporter.sendMail(mailOptions);
+    if (!mailOptions.from) {
+      mailOptions.from = process.env.EMAIL_USER;
+    }
+    return await transporter.sendMail(mailOptions);
   } catch (error) {
     throw buildMailAuthError(error);
   }
@@ -80,7 +99,8 @@ const sendMail = async (mailOptions) => {
 
 const verifyEmailTransport = async () => {
   try {
-    await emailTransporter.verify();
+    const transporter = getTransporter();
+    await transporter.verify();
     return { ok: true };
   } catch (error) {
     return { ok: false, error: buildMailAuthError(error) };
@@ -88,8 +108,10 @@ const verifyEmailTransport = async () => {
 };
 
 module.exports = {
-  emailTransporter,
+  createTransporter,
+  getTransporter,
   sendMail,
   verifyEmailTransport,
   buildMailAuthError,
+  getEmailCredentials,
 };

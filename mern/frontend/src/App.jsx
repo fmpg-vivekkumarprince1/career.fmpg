@@ -102,11 +102,7 @@ const AppContent = () => {
             />
             <Route
               path="/apply/:slug"
-              element={
-                <PrivateRoute>
-                  <Apply />
-                </PrivateRoute>
-              }
+              element={<Apply />}
             />
             <Route
               path="/my-applications"

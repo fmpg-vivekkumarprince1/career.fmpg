@@ -131,6 +131,18 @@ const OfferLetters = () => {
     }
   };
 
+  const handleDeleteOfferLetter = async (id) => {
+    try {
+      console.log('Deleting offer letter:', id);
+      await offerLetterService.deleteOfferLetter(id);
+      toast.success('Offer letter deleted successfully!');
+      setOfferLetters(prev => prev.filter(o => o._id !== id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete offer letter');
+      console.error('Error deleting offer letter:', err);
+    }
+  };
+
   return (
     <div className="ui-page">
       <div className="ui-content">
@@ -179,6 +191,7 @@ const OfferLetters = () => {
               onUpdateStatus={handleUpdateOfferLetterStatus}
               currentUser={currentUser}
               onExtend={handleExtendOfferLetter}
+              onDeleteOfferLetter={handleDeleteOfferLetter}
             />
           )}
 

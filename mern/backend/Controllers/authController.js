@@ -1,5 +1,6 @@
 const { logAudit } = require('../services/auditService');
 const User = require("../models/user");
+const PendingRegistration = require("../models/PendingRegistration");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { authConfig, getCookieMaxAge, isProduction } = require("../config/authConfig");
@@ -14,17 +15,18 @@ exports.register = async (req, res) => {
     console.log("Register: processing");
     try {
         const { name, email, password, role, phoneNumber } = req.body;
-        console.log(`Register: ${email}, role: ${role || "user"}`);
+        const normalizedEmail = email ? email.toLowerCase().trim() : "";
+        console.log(`Register: ${normalizedEmail}, role: ${role || "user"}`);
 
-        if (!name || !email || !password) {
+        if (!name || !normalizedEmail || !password) {
             console.log("Register: missing fields");
             return res.status(400).json({ message: "All fields are required" });
         }
 
         console.log("Register: checking user");
-        const userExist = await User.findOne({ email });
+        const userExist = await User.findOne({ email: normalizedEmail });
         if (userExist) {
-            console.log(`Register: ${email} exists`);
+            console.log(`Register: ${normalizedEmail} exists`);
             return res.status(400).json({ message: "User already exists with this email" });
         }
 
@@ -35,49 +37,35 @@ exports.register = async (req, res) => {
         const otp = generateOTP();
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        console.log("Register: creating user");
-        const userData = {
-            name, 
-            email, 
-            password: hashedPassword, 
-            role: role || "user",
-            phoneNumber,
-            emailVerificationOTP: otp,
-            emailVerificationOTPExpiry: otpExpiry,
-            status: "active"
-        };
+        console.log("Register: storing pending registration (data will be saved to main DB only after email verification)");
+        await PendingRegistration.findOneAndUpdate(
+            { email: normalizedEmail },
+            {
+                name: name.trim(),
+                email: normalizedEmail,
+                password: hashedPassword,
+                role: role || "user",
+                phoneNumber: phoneNumber ? String(phoneNumber).trim() : undefined,
+                emailVerificationOTP: otp,
+                emailVerificationOTPExpiry: otpExpiry,
+                createdAt: new Date(),
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
 
-        const savedUser = await User.create(userData);
-        console.log(`Register: created ${savedUser._id}`);
-        
         // Send verification email
         try {
-            await emailService.sendEmailVerificationOTP(email, otp, name);
-            console.log(`Verification email sent to: ${email}`);
+            await emailService.sendEmailVerificationOTP(normalizedEmail, otp, name.trim());
+            console.log(`Verification email sent to: ${normalizedEmail}`);
         } catch (emailError) {
-            console.error("Failed to send verification email:", emailError);
+            console.error("Failed to send verification email:", emailError.message || emailError);
             // Don't fail registration if email fails
         }
-        
-        // Log the account creation action
-        try {
-            await logAudit({
-                req: { ...req, user: savedUser }, // provide temporary user context for audit
-                action: "CREATE",
-                resourceEntity: "User",
-                resourceId: savedUser._id,
-                changes: {
-                    newData: { name, email, role: role || "user" }
-                }
-            });
-        } catch (auditError) {
-            console.error("Failed to log audit (register):", auditError);
-        }
-        
+
         res.status(201).json({
-            message: "User created successfully. Please check your email for verification code.", 
-            userId: savedUser._id,
-            requiresVerification: true
+            message: "Verification code sent to your email. Please verify to complete registration.", 
+            requiresVerification: true,
+            email: normalizedEmail
         });
     } catch (error) {
         console.error("Register error:", error.message);
@@ -91,27 +79,41 @@ exports.login = async (req, res) => {
     console.log("Login: processing");
     try {
         const { email, password } = req.body;
-        console.log(`Login: ${email}`);
+        const normalizedEmail = email ? email.toLowerCase().trim() : "";
+        console.log(`Login: ${normalizedEmail}`);
         
-        if (!email || !password) {
+        if (!normalizedEmail || !password) {
             console.log("Login: missing fields");
             return res.status(400).json({ message: "All fields are required" });
         }
 
         console.log("Login: finding user");
-        const user = await User.findOne({ email }).select("+password");
+        const user = await User.findOne({ email: normalizedEmail }).select("+password");
         if (!user){
-            console.log(`Login: ${email} not found`);
+            // Check if there is a pending registration waiting for email verification
+            const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+            if (pending) {
+                const isMatch = await bcrypt.compare(password, pending.password);
+                if (isMatch) {
+                    return res.status(403).json({ 
+                        message: "Please verify your email before logging in", 
+                        requiresVerification: true,
+                        email: pending.email
+                    });
+                }
+            }
+            console.log(`Login: ${normalizedEmail} not found`);
             return res.status(400).json({ message: "User not found" });
         }
 
         // Check if email is verified
         if (!user.isEmailVerified) {
-            console.log(`Login: ${email} email not verified`);
+            console.log(`Login: ${normalizedEmail} email not verified`);
             return res.status(403).json({ 
                 message: "Please verify your email before logging in", 
                 requiresVerification: true,
-                userId: user._id
+                userId: user._id,
+                email: user.email
             });
         }
         
@@ -201,37 +203,100 @@ exports.verifyEmail = async (req, res) => {
     console.log("VerifyEmail: processing");
     try {
         const { email, otp } = req.body;
-        console.log(`VerifyEmail: ${email} with OTP: ${otp}`);
+        const normalizedEmail = email ? email.toLowerCase().trim() : "";
+        const cleanOtp = otp ? String(otp).trim() : "";
+        console.log(`VerifyEmail: ${normalizedEmail} with OTP: ${cleanOtp}`);
 
-        if (!email || !otp) {
+        if (!normalizedEmail || !cleanOtp) {
             return res.status(400).json({ message: "Email and OTP are required" });
         }
 
-        const user = await User.findOne({ email });
+        // 1. Check pending registrations (user data saved to main DB only after verification)
+        const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+
+        if (pending) {
+            if (pending.emailVerificationOTP !== cleanOtp) {
+                return res.status(400).json({ message: "Invalid OTP" });
+            }
+
+            if (new Date() > pending.emailVerificationOTPExpiry) {
+                return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+            }
+
+            // OTP valid -> CREATE USER IN MAIN DATABASE NOW!
+            const newUser = await User.create({
+                name: pending.name,
+                email: pending.email,
+                password: pending.password, // already hashed with bcrypt
+                phoneNumber: pending.phoneNumber,
+                role: pending.role || "user",
+                status: "active",
+                isEmailVerified: true,
+            });
+
+            // Remove pending registration record
+            await PendingRegistration.deleteOne({ _id: pending._id });
+
+            console.log(`Email verified and user saved to DB: ${newUser.email} (${newUser._id})`);
+
+            // Audit log creation
+            try {
+                await logAudit({
+                    req: { ...req, user: newUser },
+                    action: "CREATE",
+                    resourceEntity: "User",
+                    resourceId: newUser._id,
+                    changes: {
+                        newData: { name: newUser.name, email: newUser.email, role: newUser.role }
+                    }
+                });
+            } catch (auditError) {
+                console.error("Failed to log audit (verifyEmail):", auditError);
+            }
+
+            // Send welcome email in background
+            try {
+                await emailService.sendWelcomeEmail({ name: newUser.name, email: newUser.email });
+            } catch (welcomeError) {
+                console.error("Failed to send welcome email:", welcomeError.message || welcomeError);
+            }
+
+            return res.status(200).json({
+                message: "Email verified and account created successfully",
+                user: {
+                    id: newUser._id,
+                    name: newUser.name,
+                    email: newUser.email,
+                    role: newUser.role
+                }
+            });
+        }
+
+        // 2. Legacy fallback for existing users registered prior to pending registration optimization
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ message: "No registration found for this email. Please register again." });
         }
 
         if (user.isEmailVerified) {
-            return res.status(400).json({ message: "Email already verified" });
+            return res.status(400).json({ message: "Email already verified. Please sign in." });
         }
 
-        if (!user.emailVerificationOTP || user.emailVerificationOTP !== otp) {
+        if (!user.emailVerificationOTP || user.emailVerificationOTP !== cleanOtp) {
             return res.status(400).json({ message: "Invalid OTP" });
         }
 
         if (new Date() > user.emailVerificationOTPExpiry) {
-            return res.status(400).json({ message: "OTP has expired" });
+            return res.status(400).json({ message: "OTP has expired. Please request a new one." });
         }
 
-        // Verify email
         user.isEmailVerified = true;
         user.emailVerificationOTP = null;
         user.emailVerificationOTPExpiry = null;
         await user.save();
 
-        console.log(`Email verified for: ${email}`);
-        res.status(200).json({ message: "Email verified successfully" });
+        console.log(`Legacy user email verified: ${normalizedEmail}`);
+        return res.status(200).json({ message: "Email verified successfully" });
     } catch (error) {
         console.error("VerifyEmail error:", error.message);
         res.status(500).json({ message: "Internal server error" });
@@ -242,39 +307,58 @@ exports.resendVerificationOTP = async (req, res) => {
     console.log("ResendVerificationOTP: processing");
     try {
         const { email } = req.body;
-        console.log(`ResendVerificationOTP: ${email}`);
+        const normalizedEmail = email ? email.toLowerCase().trim() : "";
+        console.log(`ResendVerificationOTP: ${normalizedEmail}`);
 
-        if (!email) {
+        if (!normalizedEmail) {
             return res.status(400).json({ message: "Email is required" });
         }
 
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
+        // Check if user is already verified in DB
+        const existingUser = await User.findOne({ email: normalizedEmail });
+        if (existingUser && existingUser.isEmailVerified) {
+            return res.status(400).json({ message: "Email is already verified. Please sign in." });
         }
 
-        if (user.isEmailVerified) {
-            return res.status(400).json({ message: "Email already verified" });
-        }
+        // Check pending registration
+        const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+        let recipientName = "User";
 
-        // Generate new OTP
         const otp = generateOTP();
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        user.emailVerificationOTP = otp;
-        user.emailVerificationOTPExpiry = otpExpiry;
-        await user.save();
+        if (pending) {
+            recipientName = pending.name || "User";
+            pending.emailVerificationOTP = otp;
+            pending.emailVerificationOTPExpiry = otpExpiry;
+            await pending.save();
+        } else if (existingUser && !existingUser.isEmailVerified) {
+            // Legacy unverified user
+            recipientName = existingUser.name || "User";
+            existingUser.emailVerificationOTP = otp;
+            existingUser.emailVerificationOTPExpiry = otpExpiry;
+            await existingUser.save();
+        } else {
+            return res.status(404).json({ message: "No registration found for this email. Please register again." });
+        }
 
         // Send verification email
         try {
-            await emailService.sendEmailVerificationOTP(email, otp, user.name);
-            console.log(`Verification email resent to: ${email}`);
+            await emailService.sendEmailVerificationOTP(normalizedEmail, otp, recipientName);
+            console.log(`Verification email resent to: ${normalizedEmail}`);
+            return res.status(200).json({ message: "Verification OTP sent successfully" });
         } catch (emailError) {
-            console.error("Failed to send verification email:", emailError);
-            return res.status(500).json({ message: "Failed to send verification email" });
+            console.error("Failed to send verification email:", emailError.message || emailError);
+            if (process.env.NODE_ENV !== "production") {
+                return res.status(200).json({
+                    message: `Email sending failed (${emailError.message || "SMTP error"}). Dev OTP: ${otp}`,
+                    devOtp: otp
+                });
+            }
+            return res.status(500).json({ 
+                message: emailError.message || "Failed to send verification email. Please check email credentials." 
+            });
         }
-
-        res.status(200).json({ message: "Verification OTP sent successfully" });
     } catch (error) {
         console.error("ResendVerificationOTP error:", error.message);
         res.status(500).json({ message: "Internal server error" });
@@ -308,12 +392,19 @@ exports.forgotPassword = async (req, res) => {
         try {
             await emailService.sendPasswordResetOTP(email, otp, user.name);
             console.log(`Password reset email sent to: ${email}`);
+            return res.status(200).json({ message: "Password reset OTP sent to your email" });
         } catch (emailError) {
-            console.error("Failed to send password reset email:", emailError);
-            return res.status(500).json({ message: "Failed to send password reset email" });
+            console.error("Failed to send password reset email:", emailError.message || emailError);
+            if (process.env.NODE_ENV !== "production") {
+                return res.status(200).json({
+                    message: `Email sending failed (${emailError.message || "SMTP error"}). Dev OTP: ${otp}`,
+                    devOtp: otp
+                });
+            }
+            return res.status(500).json({ 
+                message: emailError.message || "Failed to send password reset email. Please check email credentials." 
+            });
         }
-
-        res.status(200).json({ message: "Password reset OTP sent to your email" });
     } catch (error) {
         console.error("ForgotPassword error:", error.message);
         res.status(500).json({ message: "Internal server error" });

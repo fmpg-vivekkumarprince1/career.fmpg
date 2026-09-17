@@ -75,9 +75,13 @@ const EmailVerification = () => {
   const handleResendOTP = async () => {
     setResendLoading(true);
     try {
-      await authService.resendVerificationOTP({ email });
-      toast.success('Verification code sent to your email');
-      setOtp('');
+      const res = await authService.resendVerificationOTP({ email });
+      if (res.data?.devOtp) {
+        toast.success(res.data.message || 'OTP resent (dev mode)');
+        setOtp(res.data.devOtp);
+      } else {
+        toast.success(res.data?.message || 'Verification code sent to your email');
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to resend OTP');
     } finally {

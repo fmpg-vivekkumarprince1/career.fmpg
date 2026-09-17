@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ExtendOfferModal from './ExtendOfferModal';
+import ConfirmationModal from '../common/ConfirmationModal';
+import { useAuth } from '../../hooks/useAuth';
 import { formatCurrencyValue } from '../../utils/currencyUtils';
 
 const OfferLetterList = ({ 
@@ -9,10 +11,14 @@ const OfferLetterList = ({
   onSendEmail, 
   onUpdateStatus,
   onExtend,
+  onDeleteOfferLetter,
   currentUser,
   autoOpenExtendEmail = '',
   filterEmail = ''
 }) => {
+  const { isSuperAdmin } = useAuth();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [letterToDelete, setLetterToDelete] = useState(null);
   const [expandedLetter, setExpandedLetter] = useState(null);
   const [sendingEmail, setSendingEmail] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(null);
@@ -144,7 +150,12 @@ const OfferLetterList = ({
                   <div className="flex-1">
                     <div className="flex items-center space-x-4">
                       <div>
-                        <h4 className="text-white font-medium">{letter.candidateName}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-white font-medium">{letter.candidateName}</h4>
+                          <span className="text-xs font-mono font-bold text-lime-400 bg-lime-950/40 px-1.5 py-0.5 rounded border border-lime-800/40">
+                            FMPG-OFF-{letter.shortId || letter._id.toString().slice(-6).toUpperCase()}
+                          </span>
+                        </div>
                         <p className="text-gray-400 text-sm">{letter.position} • {letter.department}</p>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(letter.status)}`}>
@@ -349,6 +360,19 @@ const OfferLetterList = ({
                             Extend Offer
                           </button>
                         )}
+
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => {
+                              setLetterToDelete(letter);
+                              setShowDeleteModal(true);
+                            }}
+                            className="px-4 py-2 bg-transparent border border-red-600/40 hover:border-red-500 text-red-400 hover:bg-red-900/30 text-sm font-medium rounded transition-colors flex items-center"
+                            title="Delete Offer Letter (Super Admin)"
+                          >
+                            Delete Offer
+                          </button>
+                        )}
                       </>
                     </div>
                   </div>
@@ -365,6 +389,27 @@ const OfferLetterList = ({
         onClose={handleCloseExtendModal}
         offerLetter={selectedLetterForExtend}
         onExtend={handleExtend}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setLetterToDelete(null);
+        }}
+        onConfirm={async () => {
+          if (letterToDelete && onDeleteOfferLetter) {
+            await onDeleteOfferLetter(letterToDelete._id);
+          }
+          setShowDeleteModal(false);
+          setLetterToDelete(null);
+        }}
+        title="Delete Offer Letter"
+        message={`Are you sure you want to delete the offer letter for "${letterToDelete?.candidateName}" (${letterToDelete?.position})? This action cannot be undone.`}
+        confirmText="Delete Offer Letter"
+        cancelText="Cancel"
+        type="danger"
       />
     </div>
   );
