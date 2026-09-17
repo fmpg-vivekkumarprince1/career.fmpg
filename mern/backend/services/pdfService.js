@@ -72,19 +72,14 @@ exports.generateOfferLetter = async (candidateData, jobData) => {
       .fillColor('#34495e');
 
     const dateBoxY = doc.y;
-    doc.rect(pageWidth - 200, dateBoxY, 150, 50)
+    doc.rect(pageWidth - 200, dateBoxY, 150, 30)
       .fillOpacity(0.05)
       .fill('#e8f4fc');
 
     doc.text(`Ref: FMPG/HR/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`,
       pageWidth - 190, dateBoxY + 10);
-    doc.text(`Date: ${new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })}`, pageWidth - 190, dateBoxY + 30);
 
-    doc.moveDown(5);
+    doc.moveDown(4);
 
     //offer letter header
     console.log(`Adding content for ${candidateData.fullName}`);

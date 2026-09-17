@@ -460,13 +460,31 @@ const getContractByApplicationId = async (req, res) => {
     const { applicationId } = req.params;
 
     // Find the application doc first to handle slugs correctly
-    const application = await findApplicationByIdentifier(applicationId);
-    if (!application) {
-      return res.status(404).json({ message: "Application not found" });
+    let application = await findApplicationByIdentifier(applicationId);
+    let offerLetter = null;
+
+    if (application) {
+      offerLetter = await OfferLetter.findOne({ applicationId: application._id });
+      if (!offerLetter && application.offerLetterId) {
+        offerLetter = await OfferLetter.findById(application.offerLetterId);
+      }
+    } else {
+      // Fallback: check if applicationId is an offer letter ID or shortId (e.g. from EmployeeManagement)
+      const normalized = normalizeOfferLetterLookupId(applicationId);
+      if (mongoose.Types.ObjectId.isValid(normalized)) {
+        offerLetter = await OfferLetter.findById(normalized);
+      }
+      if (!offerLetter && typeof applicationId === 'string') {
+        offerLetter = await OfferLetter.findOne({ shortId: applicationId.toUpperCase() });
+      }
+      if (offerLetter && offerLetter.applicationId) {
+        application = await Application.findById(offerLetter.applicationId);
+      }
     }
 
-    // Find offer letter by strictly using the resolved application ID
-    const offerLetter = await OfferLetter.findOne({ applicationId: application._id });
+    if (!offerLetter && !application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
 
     if (!offerLetter) {
       return res.status(404).json({
@@ -479,7 +497,8 @@ const getContractByApplicationId = async (req, res) => {
       .populate('offerLetterId');
 
     if (!contract) {
-      return res.status(404).json({
+      return res.status(200).json({
+        contract: null,
         message: "No contract found for this application",
         offerLetter: offerLetter // Return the complete offer letter object
       });

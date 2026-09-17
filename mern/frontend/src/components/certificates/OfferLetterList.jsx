@@ -175,10 +175,6 @@ const OfferLetterList = ({
                         <span className="text-xs text-gray-500 ml-1">({letter.payoutFrequency})</span>
                       )}
                     </span>
-                    <span className="text-gray-500 text-sm">•</span>
-                    <span className="text-gray-400 text-sm">
-                      {new Date(letter.issuedOn).toLocaleDateString()}
-                    </span>
                     <button
                       onClick={() => toggleExpanded(letter._id)}
                       className="ml-4 text-lime-400 hover:text-lime-300 transition-colors"

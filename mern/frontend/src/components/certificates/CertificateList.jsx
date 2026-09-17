@@ -313,10 +313,6 @@ const CertificateList = ({ certificates, loading, onEmailCertificate, onDeleteCe
                       <div className="text-gray-400 font-medium md:col-span-1">Issued By:</div>
                       <div className="text-white md:col-span-3">{verifiedCertificate.issuedBy}</div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-y-3 mt-3">
-                      <div className="text-gray-400 font-medium md:col-span-1">Issued On:</div>
-                      <div className="text-white md:col-span-3">{format(new Date(verifiedCertificate.issuedOn), 'MMM dd, yyyy')}</div>
-                    </div>
 
                     <div className="mt-6 pt-4 border-t border-gray-600">
                       <button

@@ -56,9 +56,10 @@ const ApplicationDetail = () => {
       setApplication(appResponse.data);
       
       // Load offer letter details if application has an offer letter
+      const targetAppId = appResponse.data._id || id;
       if (appResponse.data.offerLetterId) {
         try {
-          const offerLetterResponse = await applicationService.getApplicationOfferLetter(id);
+          const offerLetterResponse = await applicationService.getApplicationOfferLetter(targetAppId);
           setOfferLetter(offerLetterResponse.data);
           console.log('Offer letter loaded:', offerLetterResponse.data);
         } catch (offerErr) {
@@ -75,7 +76,7 @@ const ApplicationDetail = () => {
       
       // Load contract details if application has been offered or hired
       if (appResponse.data.status === 'offered' || appResponse.data.status === 'hired') {
-        loadContractDetails(id);
+        loadContractDetails(targetAppId);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || `Error loading application details for ID: ${id}`);
@@ -95,6 +96,7 @@ const ApplicationDetail = () => {
         setContract(response.data.contract);
         console.log('Contract loaded:', response.data.contract);
       } else {
+        setContract(null);
         console.log('No contract found, offer status:', response.data?.offerLetter?.status);
       }
       
@@ -115,14 +117,19 @@ const ApplicationDetail = () => {
       }
     } catch (err) {
       console.error('Error loading contract details:', err.response?.data || err.message);
-      // If contract loading fails, still try to load offer letter directly
-      console.log('Contract loading failed, trying to load offer letter directly...');
-      try {
-        const offerLetterResponse = await applicationService.getApplicationOfferLetter(applicationId);
-        setOfferLetter(offerLetterResponse.data);
-        console.log('Offer letter loaded after contract error:', offerLetterResponse.data);
-      } catch (offerErr) {
-        console.log('Could not load offer letter after contract error:', offerErr.message);
+      // If contract endpoint returned offerLetter in error response data (e.g. legacy 404 response)
+      if (err.response?.data?.offerLetter) {
+        setOfferLetter(err.response.data.offerLetter);
+      } else {
+        // If contract loading fails, still try to load offer letter directly
+        console.log('Contract loading failed, trying to load offer letter directly...');
+        try {
+          const offerLetterResponse = await applicationService.getApplicationOfferLetter(applicationId);
+          setOfferLetter(offerLetterResponse.data);
+          console.log('Offer letter loaded after contract error:', offerLetterResponse.data);
+        } catch (offerErr) {
+          console.log('Could not load offer letter after contract error:', offerErr.message);
+        }
       }
     } finally {
       setContractLoading(false);

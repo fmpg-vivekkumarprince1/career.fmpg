@@ -976,8 +976,6 @@ async function generateOfferLetterPDFInMemory(offerLetter) {
     doc.text('REFERENCE', refX, refY, { lineBreak: false, characterSpacing: 0.8 });
     doc.font('Helvetica').fontSize(9).fillColor(C.mid);
     doc.text(`FMPG-OFF-${offerLetter._id.toString().slice(-6).toUpperCase()}`, refX, refY + 12, { lineBreak: false });
-    doc.font('Helvetica').fontSize(8).fillColor(C.subtle);
-    doc.text(`Issued: ${fmt(offerLetter.createdAt)}`, refX, refY + 24, { lineBreak: false });
 
     // ── BODY ────────────────────────────────────────────────
     let y = headerY + headerH + 22;

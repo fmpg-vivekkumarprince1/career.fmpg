@@ -556,7 +556,6 @@ async function generateCertificatePDFBuffer(certificate) {
 
     const metaRows = [
         ['Certificate ID', `FMPG-${_id}`],
-        ['Issued On', fmt(new Date())],
         ['Verify At', verifyUrl],
     ];
 
@@ -569,7 +568,7 @@ async function generateCertificatePDFBuffer(certificate) {
         doc.text(value, metaX + 80, rowY, { lineBreak: false, width: 250, ellipsis: true });
     });
 
-    doc.rect(metaX - 12, metaStartY, 2, 50).fill(C.limeDim);
+    doc.rect(metaX - 12, metaStartY, 2, 32).fill(C.limeDim);
 
     drawSignatureBlock(doc, W - 310, metaStartY + 4, 'Founder & Director', 'Vivek Kumar');
     drawSignatureBlock(doc, W - 160, metaStartY + 4, 'HR Manager', 'FMPG Team');

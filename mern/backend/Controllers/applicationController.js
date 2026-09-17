@@ -1084,43 +1084,65 @@ exports.getApplicationOfferLetter = async (req, res) => {
     const application = await findApplicationByIdentifier(applicationId, [{ path: 'offerLetterId' }]);
     if (!application) return res.status(404).json({ message: "Application not found" });
 
-    if (!application.offerLetterId) {
+    let offerLetter = application.offerLetterId;
+    if (!offerLetter) {
+      offerLetter = await OfferLetter.findOne({ applicationId: application._id });
+      if (offerLetter) {
+        await Application.findByIdAndUpdate(application._id, { offerLetterId: offerLetter._id });
+      }
+    }
+
+    if (!offerLetter) {
       return res.status(404).json({ message: "No offer letter found for this application" });
     }
 
-    res.status(200).json(application.offerLetterId);
+    res.status(200).json(offerLetter);
   } catch (error) {
     handleError(res, error, "getApplicationOfferLetter");
   }
 };
 
-// Get my application offer letter (for candidates)
+// Get my application offer letter (for candidates, or HR/admin)
 exports.getMyApplicationOfferLetter = async (req, res) => {
-  console.log("Get my application offer letter:", req.params.applicationId, "by user:", req.user.userId);
+  console.log("Get my application offer letter:", req.params.applicationId, "by user:", req.user?.userId);
   try {
     const { applicationId } = req.params;
-    const userId = req.user.userId; // Fixed: use userId instead of id
+    const userId = req.user?.userId;
 
     const targetApplication = await findApplicationByIdentifier(applicationId);
     if (!targetApplication) {
       return res.status(404).json({ message: "Application not found or you don't have permission to access it" });
     }
 
-    // Find the application and verify it belongs to the current user
-    const application = await Application.findOne({
-      _id: targetApplication._id,
-      userId: userId
-    }).populate('offerLetterId');
+    const isPrivileged = req.user && ['admin', 'superadmin', 'hr'].includes(req.user.role);
+
+    let application;
+    if (isPrivileged) {
+      application = await Application.findById(targetApplication._id).populate('offerLetterId');
+    } else {
+      application = await Application.findOne({
+        _id: targetApplication._id,
+        userId: userId
+      }).populate('offerLetterId');
+    }
 
     if (!application) {
       return res.status(404).json({ message: "Application not found or you don't have permission to access it" });
     }
 
-    if (!application.offerLetterId) {
+    let offerLetter = application.offerLetterId;
+    if (!offerLetter) {
+      offerLetter = await OfferLetter.findOne({ applicationId: application._id });
+      if (offerLetter) {
+        await Application.findByIdAndUpdate(application._id, { offerLetterId: offerLetter._id });
+      }
+    }
+
+    if (!offerLetter) {
       return res.status(404).json({ message: "No offer letter found for this application" });
     }
 
-    res.status(200).json(application.offerLetterId);
+    res.status(200).json(offerLetter);
   } catch (error) {
     handleError(res, error, "getMyApplicationOfferLetter");
   }
@@ -1332,7 +1354,6 @@ async function createOfferPDFInMemory(application, offerDetails) {
       doc.on('error', reject);
 
       doc.fontSize(25).text("Offer Letter", { align: "center" }).moveDown();
-      doc.fontSize(12).text(`Date: ${new Date().toLocaleDateString()}`).moveDown();
       doc.text(`Dear ${application.fullName},`).moveDown();
       doc.text(`We're pleased to offer you ${application.jobId.title} at FMPG.`).moveDown();
       doc.text(offerDetails).moveDown(2);

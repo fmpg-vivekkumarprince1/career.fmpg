@@ -139,7 +139,8 @@ const MyApplications = () => {
   // Load offer letter for an application
   const loadOfferLetter = async (applicationId) => {
     try {
-      const response = await applicationService.getApplicationOfferLetter(applicationId);
+      const fetchFn = applicationService.getMyApplicationOfferLetter || applicationService.getApplicationOfferLetter;
+      const response = await fetchFn(applicationId);
       setOfferLetters(prev => ({ ...prev, [applicationId]: response.data }));
       return response.data;
     } catch (err) {

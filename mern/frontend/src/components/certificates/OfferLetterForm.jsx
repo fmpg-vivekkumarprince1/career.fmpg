@@ -130,17 +130,17 @@ const OfferLetterForm = ({ onSubmit, loading, editData = null }) => {
   };
 
   return (
-    <div className="bg-secondary-black rounded-lg shadow-md border border-dark-gray">
-      <div className="p-6">
-        <h3 className="text-xl font-semibold text-white mb-5">Issue Offer Letter</h3>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+      <div className="p-6 md:p-8">
+        <h3 className="text-xl font-bold text-slate-900 mb-5">Issue Offer Letter</h3>
 
         {!showForm ? (
           <div className="text-center py-8">
-            <p className="text-gray-400 mb-6">Create a new offer letter for a candidate</p>
+            <p className="text-slate-500 mb-6">Create a new offer letter for a candidate</p>
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="px-5 py-2 bg-lime-400 hover:bg-lime-600 text-black font-medium rounded-md transition-colors"
+              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition-colors"
             >
               New Offer Letter
             </button>
@@ -155,18 +155,18 @@ const OfferLetterForm = ({ onSubmit, loading, editData = null }) => {
               calculatedDuration={calculatedDuration}
             />
 
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 pt-4">
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-5 py-2 bg-lime-400 hover:bg-lime-600 text-black font-medium rounded-md transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {loading ? 'Generating Offer Letter...' : 'Generate Offer Letter'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-5 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
+                  className="px-6 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium rounded-xl shadow-sm transition-colors"
                 >
                   Cancel
                 </button>

@@ -86,19 +86,29 @@ const ensureDbConnection = async () => {
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://career-fmpg.vercel.app', // Update with your actual domain
+  'http://localhost:5175',
+  process.env.FRONTEND_URL,
+  'https://career-fmpg.vercel.app',
   'https://fmpg.vercel.app'
-];
+].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin || isVercel) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    try {
+      const hostname = new URL(origin).hostname;
+      if (
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV === 'development' ||
+        hostname.endsWith('.vercel.app')
+      ) {
+        return callback(null, true);
+      }
+    } catch {
+      // Ignore URL parsing errors for non-standard origins
     }
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

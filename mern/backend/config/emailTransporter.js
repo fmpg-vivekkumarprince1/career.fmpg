@@ -216,7 +216,7 @@ const sendMailViaBrevo = async (mailOptions, apiKey) => {
 };
 
 const sendMail = async (mailOptions) => {
-  // 1. High priority: Check for HTTP Email APIs (Resend / Brevo) which work 100% on Render Free Tier
+  // 1. High priority: Check for HTTP Email APIs (Resend / Brevo) which work reliably in serverless environments (Vercel)
   const resendApiKey = process.env.RESEND_API_KEY;
   if (resendApiKey) {
     console.log("Dispatching email via Resend HTTP API (port 443)...");
@@ -259,13 +259,6 @@ const sendMail = async (mailOptions) => {
       cachedTransporter = null;
     }
 
-    const isRenderEnvironment = !!(
-      process.env.RENDER ||
-      process.env.RENDER_SERVICE_ID ||
-      process.env.RENDER_INSTANCE_ID ||
-      (typeof process.env.PORT === "string" && process.env.PORT.length > 0 && !process.env.PORT.includes("4001"))
-    );
-
     const isBlockedOrTimeout =
       error?.code === "ETIMEDOUT" ||
       error?.code === "ESOCKET" ||
@@ -274,11 +267,11 @@ const sendMail = async (mailOptions) => {
       (error?.message && error.message.toLowerCase().includes("timeout"));
 
     if (isBlockedOrTimeout) {
-      const renderMsg =
-        "Email delivery failed: Render Free Tier blocks outbound SMTP ports (587, 465, 25). " +
-        "To enable emails on Render, either add RESEND_API_KEY (free at https://resend.com) to your Render environment variables, " +
-        "or upgrade your Render service to a paid plan ($7/mo Starter) to unblock SMTP.";
-      const helpfulError = new Error(renderMsg);
+      const errorMsg =
+        "Email delivery failed: Outbound SMTP connection timed out or was refused. " +
+        "When deploying on Vercel or cloud environments, consider adding RESEND_API_KEY (free at https://resend.com) " +
+        "or BREVO_API_KEY for HTTP-based email delivery over port 443.";
+      const helpfulError = new Error(errorMsg);
       helpfulError.code = "SMTP_PORTS_BLOCKED";
       throw helpfulError;
     }

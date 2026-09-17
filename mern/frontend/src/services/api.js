@@ -269,7 +269,8 @@ export const applicationService = {
   // Application status management
   updateApplicationStatus: (id, statusData) => api.put(`/api/applications/${id}/status`, statusData),
   generateOfferLetter: (applicationId, offerDetails) => api.post(`/api/applications/${applicationId}/offer`, offerDetails),
-  getApplicationOfferLetter: (applicationId) => api.get(`/api/applications/my/${applicationId}/offer-letter`),
+  getApplicationOfferLetter: (applicationId) => api.get(`/api/applications/${applicationId}/offer-letter`),
+  getMyApplicationOfferLetter: (applicationId) => api.get(`/api/applications/my/${applicationId}/offer-letter`),
   rejectApplication: (applicationId, rejectionData) => api.post(`/api/applications/${applicationId}/reject`, rejectionData),
   sendWelcomeEmail: (applicationId, welcomeData) => api.post(`/api/applications/${applicationId}/welcome`, welcomeData),
   
