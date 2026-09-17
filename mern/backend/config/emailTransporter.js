@@ -115,7 +115,121 @@ const getTransporter = () => {
   return cachedTransporter;
 };
 
+const sendMailViaResend = async (mailOptions, apiKey) => {
+  const to = Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to];
+  const from = process.env.RESEND_FROM || (process.env.EMAIL_USER ? `FMPG Careers <${process.env.EMAIL_USER}>` : "FMPG Careers <onboarding@resend.dev>");
+  const replyTo = mailOptions.replyTo || process.env.REPLY_TO_EMAIL || process.env.EMAIL_USER;
+
+  const payload = {
+    from,
+    to,
+    subject: mailOptions.subject,
+    html: mailOptions.html || mailOptions.text
+  };
+
+  if (replyTo) {
+    payload.reply_to = replyTo;
+  }
+
+  if (mailOptions.attachments && mailOptions.attachments.length > 0) {
+    payload.attachments = mailOptions.attachments.map((att) => {
+      let content = att.content;
+      if (Buffer.isBuffer(content)) {
+        content = content.toString("base64");
+      } else if (typeof content === "string") {
+        content = Buffer.from(content).toString("base64");
+      }
+      return {
+        filename: att.filename,
+        content
+      };
+    });
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey.trim()}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`Resend Email API error: ${data.message || JSON.stringify(data)}`);
+  }
+
+  return { messageId: data.id, provider: "resend" };
+};
+
+const sendMailViaBrevo = async (mailOptions, apiKey) => {
+  const to = Array.isArray(mailOptions.to)
+    ? mailOptions.to.map(email => ({ email }))
+    : [{ email: mailOptions.to }];
+  const sender = {
+    email: process.env.BREVO_FROM || process.env.EMAIL_USER || "careers@fmpg.in",
+    name: "FMPG Careers"
+  };
+  const replyTo = {
+    email: mailOptions.replyTo || process.env.REPLY_TO_EMAIL || process.env.EMAIL_USER || "careers@fmpg.in"
+  };
+
+  const payload = {
+    sender,
+    to,
+    replyTo,
+    subject: mailOptions.subject,
+    htmlContent: mailOptions.html || mailOptions.text
+  };
+
+  if (mailOptions.attachments && mailOptions.attachments.length > 0) {
+    payload.attachment = mailOptions.attachments.map((att) => {
+      let content = att.content;
+      if (Buffer.isBuffer(content)) {
+        content = content.toString("base64");
+      } else if (typeof content === "string") {
+        content = Buffer.from(content).toString("base64");
+      }
+      return {
+        name: att.filename,
+        content
+      };
+    });
+  }
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey.trim(),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`Brevo Email API error: ${data.message || JSON.stringify(data)}`);
+  }
+
+  return { messageId: data.messageId, provider: "brevo" };
+};
+
 const sendMail = async (mailOptions) => {
+  // 1. High priority: Check for HTTP Email APIs (Resend / Brevo) which work 100% on Render Free Tier
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    console.log("Dispatching email via Resend HTTP API (port 443)...");
+    return await sendMailViaResend(mailOptions, resendApiKey);
+  }
+
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  if (brevoApiKey) {
+    console.log("Dispatching email via Brevo HTTP API (port 443)...");
+    return await sendMailViaBrevo(mailOptions, brevoApiKey);
+  }
+
+  // 2. Standard SMTP fallback (requires open outbound SMTP ports)
   const { user, pass } = getEmailCredentials();
   if (!user || !pass) {
     console.warn("⚠️ No email credentials configured (EMAIL_USER or EMAIL_PASS missing). Skipping email dispatch.");
@@ -139,20 +253,51 @@ const sendMail = async (mailOptions) => {
 
     return await Promise.race([emailPromise, timeoutPromise]);
   } catch (error) {
-    console.error("sendMail error:", error.message || error);
+    console.error("sendMail SMTP error:", error.message || error);
     // If connection was dropped or socket timed out, reset cached transporter so next call gets a clean connection
     if (error?.code === "ETIMEDOUT" || error?.code === "ESOCKET" || error?.code === "ECONNRESET") {
       cachedTransporter = null;
     }
+
+    const isRenderEnvironment = !!(
+      process.env.RENDER ||
+      process.env.RENDER_SERVICE_ID ||
+      process.env.RENDER_INSTANCE_ID ||
+      (typeof process.env.PORT === "string" && process.env.PORT.length > 0 && !process.env.PORT.includes("4001"))
+    );
+
+    const isBlockedOrTimeout =
+      error?.code === "ETIMEDOUT" ||
+      error?.code === "ESOCKET" ||
+      error?.code === "ECONNRESET" ||
+      error?.code === "ECONNREFUSED" ||
+      (error?.message && error.message.toLowerCase().includes("timeout"));
+
+    if (isBlockedOrTimeout) {
+      const renderMsg =
+        "Email delivery failed: Render Free Tier blocks outbound SMTP ports (587, 465, 25). " +
+        "To enable emails on Render, either add RESEND_API_KEY (free at https://resend.com) to your Render environment variables, " +
+        "or upgrade your Render service to a paid plan ($7/mo Starter) to unblock SMTP.";
+      const helpfulError = new Error(renderMsg);
+      helpfulError.code = "SMTP_PORTS_BLOCKED";
+      throw helpfulError;
+    }
+
     throw buildMailAuthError(error);
   }
 };
 
 const verifyEmailTransport = async () => {
+  if (process.env.RESEND_API_KEY) {
+    return { ok: true, provider: "resend" };
+  }
+  if (process.env.BREVO_API_KEY) {
+    return { ok: true, provider: "brevo" };
+  }
   try {
     const transporter = getTransporter();
     await transporter.verify();
-    return { ok: true };
+    return { ok: true, provider: "smtp" };
   } catch (error) {
     return { ok: false, error: buildMailAuthError(error) };
   }

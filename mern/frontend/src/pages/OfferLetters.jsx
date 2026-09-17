@@ -106,7 +106,7 @@ const OfferLetters = () => {
       });
       toast.success('Offer letter emailed successfully!');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to email offer letter');
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to email offer letter');
       console.error('Error:', err);
     }
   };
