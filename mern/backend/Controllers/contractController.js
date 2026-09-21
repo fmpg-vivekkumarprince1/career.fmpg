@@ -27,16 +27,14 @@ const getOfferForAcceptance = async (req, res) => {
 
     let offerLetter;
     if (application) {
-      offerLetter = await OfferLetter.findOne({
-        applicationId: application._id,
-        status: 'Pending'
-      });
+      // First find the latest offer letter for this application regardless of status
+      offerLetter = await OfferLetter.findOne({ applicationId: application._id }).sort({ createdAt: -1 });
     } else {
       // If no application found, check if slug is an offer letter ID
       // This supports manual offers issued without an application
       const offerId = normalizeOfferLetterLookupId(slug);
       if (mongoose.Types.ObjectId.isValid(offerId)) {
-        offerLetter = await OfferLetter.findOne({ _id: offerId, status: 'Pending' });
+        offerLetter = await OfferLetter.findById(offerId);
       } else {
         // Try fuzzy match for offer ID
         offerLetter = await OfferLetter.findOne({
@@ -46,16 +44,57 @@ const getOfferForAcceptance = async (req, res) => {
               regex: offerId + "$",
               options: "i"
             }
-          },
-          status: 'Pending'
+          }
         });
       }
     }
 
     if (!offerLetter) {
       return res.status(404).json({
-        message: "Offer not found or already processed",
+        message: "Offer not found",
         error: "OFFER_NOT_FOUND"
+      });
+    }
+
+    // If offer is already accepted
+    if (offerLetter.status === 'Accepted') {
+      const existingContract = await Contract.findOne({
+        offerLetterId: offerLetter._id
+      });
+      return res.status(400).json({
+        message: "This offer letter has already been accepted",
+        error: "OFFER_ALREADY_ACCEPTED",
+        status: "Accepted",
+        acceptedAt: offerLetter.acceptedAt,
+        offerLetter: {
+          _id: offerLetter._id,
+          candidateName: offerLetter.candidateName,
+          position: offerLetter.position,
+          department: offerLetter.department,
+          companyName: offerLetter.companyName,
+          status: offerLetter.status,
+          acceptedAt: offerLetter.acceptedAt
+        },
+        hasExistingContract: !!existingContract
+      });
+    }
+
+    // If offer is already rejected
+    if (offerLetter.status === 'Rejected') {
+      return res.status(400).json({
+        message: "This offer letter has already been rejected",
+        error: "OFFER_ALREADY_REJECTED",
+        status: "Rejected",
+        rejectedAt: offerLetter.rejectedAt,
+        offerLetter: {
+          _id: offerLetter._id,
+          candidateName: offerLetter.candidateName,
+          position: offerLetter.position,
+          department: offerLetter.department,
+          companyName: offerLetter.companyName,
+          status: offerLetter.status,
+          rejectedAt: offerLetter.rejectedAt
+        }
       });
     }
 
@@ -88,7 +127,8 @@ const getOfferForAcceptance = async (req, res) => {
         benefits: offerLetter.benefits,
         reportingManager: offerLetter.reportingManager,
         validUntil: offerLetter.validUntil,
-        companyName: offerLetter.companyName
+        companyName: offerLetter.companyName,
+        status: offerLetter.status
       },
       hasExistingContract: !!existingContract,
       existingContract: existingContract
@@ -116,15 +156,12 @@ const acceptOffer = async (req, res) => {
 
     let offerLetter;
     if (application) {
-      offerLetter = await OfferLetter.findOne({
-        applicationId: application._id,
-        status: 'Pending'
-      });
+      offerLetter = await OfferLetter.findOne({ applicationId: application._id }).sort({ createdAt: -1 });
     } else {
       // Support manual offers
       const offerId = normalizeOfferLetterLookupId(slug);
       if (mongoose.Types.ObjectId.isValid(offerId)) {
-        offerLetter = await OfferLetter.findOne({ _id: offerId, status: 'Pending' });
+        offerLetter = await OfferLetter.findById(offerId);
       } else {
         offerLetter = await OfferLetter.findOne({
           $expr: {
@@ -133,15 +170,34 @@ const acceptOffer = async (req, res) => {
               regex: offerId + "$",
               options: "i"
             }
-          },
-          status: 'Pending'
+          }
         });
       }
     }
 
     if (!offerLetter) {
       return res.status(404).json({
-        message: "Offer not found or already processed"
+        message: "Offer not found"
+      });
+    }
+
+    // Check if already accepted
+    if (offerLetter.status === 'Accepted') {
+      return res.status(400).json({
+        message: "This offer letter has already been accepted",
+        error: "OFFER_ALREADY_ACCEPTED",
+        status: "Accepted",
+        acceptedAt: offerLetter.acceptedAt
+      });
+    }
+
+    // Check if already rejected
+    if (offerLetter.status === 'Rejected') {
+      return res.status(400).json({
+        message: "This offer letter has already been rejected",
+        error: "OFFER_ALREADY_REJECTED",
+        status: "Rejected",
+        rejectedAt: offerLetter.rejectedAt
       });
     }
 
@@ -282,15 +338,12 @@ const rejectOffer = async (req, res) => {
 
     let offerLetter;
     if (application) {
-      offerLetter = await OfferLetter.findOne({
-        applicationId: application._id,
-        status: 'Pending'
-      });
+      offerLetter = await OfferLetter.findOne({ applicationId: application._id }).sort({ createdAt: -1 });
     } else {
       // Support manual offers
       const offerId = normalizeOfferLetterLookupId(slug);
       if (mongoose.Types.ObjectId.isValid(offerId)) {
-        offerLetter = await OfferLetter.findOne({ _id: offerId, status: 'Pending' });
+        offerLetter = await OfferLetter.findById(offerId);
       } else {
         offerLetter = await OfferLetter.findOne({
           $expr: {
@@ -299,15 +352,34 @@ const rejectOffer = async (req, res) => {
               regex: offerId + "$",
               options: "i"
             }
-          },
-          status: 'Pending'
+          }
         });
       }
     }
 
     if (!offerLetter) {
       return res.status(404).json({
-        message: "Offer not found or already processed"
+        message: "Offer not found"
+      });
+    }
+
+    // Check if already accepted
+    if (offerLetter.status === 'Accepted') {
+      return res.status(400).json({
+        message: "This offer letter has already been accepted",
+        error: "OFFER_ALREADY_ACCEPTED",
+        status: "Accepted",
+        acceptedAt: offerLetter.acceptedAt
+      });
+    }
+
+    // Check if already rejected
+    if (offerLetter.status === 'Rejected') {
+      return res.status(400).json({
+        message: "This offer letter has already been rejected",
+        error: "OFFER_ALREADY_REJECTED",
+        status: "Rejected",
+        rejectedAt: offerLetter.rejectedAt
       });
     }
 
