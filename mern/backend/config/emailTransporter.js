@@ -124,7 +124,10 @@ const sendMailViaResend = async (mailOptions, apiKey) => {
     from,
     to,
     subject: mailOptions.subject,
-    html: mailOptions.html || mailOptions.text
+    html: mailOptions.html || mailOptions.text,
+    headers: {
+      "X-Entity-Ref-ID": `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+    }
   };
 
   if (replyTo) {
