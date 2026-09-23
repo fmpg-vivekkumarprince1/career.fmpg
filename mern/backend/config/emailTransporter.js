@@ -117,8 +117,8 @@ const getTransporter = () => {
 
 const sendMailViaResend = async (mailOptions, apiKey) => {
   const to = Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to];
-  const from = process.env.RESEND_FROM || (process.env.EMAIL_USER ? `FMPG Careers <${process.env.EMAIL_USER}>` : "FMPG Careers <onboarding@resend.dev>");
-  const replyTo = mailOptions.replyTo || process.env.REPLY_TO_EMAIL || process.env.EMAIL_USER;
+  const from = process.env.RESEND_FROM || (process.env.EMAIL_USER ? `FMPG Careers <${process.env.EMAIL_USER}>` : "FMPG Careers <contact@fmpg.in>");
+  const replyTo = mailOptions.replyTo || process.env.REPLY_TO_EMAIL || "fmpg974@gmail.com";
 
   const payload = {
     from,
@@ -132,9 +132,16 @@ const sendMailViaResend = async (mailOptions, apiKey) => {
   }
 
   if (mailOptions.attachments && mailOptions.attachments.length > 0) {
+    const fs = require("fs");
     payload.attachments = mailOptions.attachments.map((att) => {
       let content = att.content;
-      if (Buffer.isBuffer(content)) {
+      if (!content && att.path) {
+        try {
+          content = fs.readFileSync(att.path).toString("base64");
+        } catch (e) {
+          console.error("Failed to read attachment from path:", att.path, e);
+        }
+      } else if (Buffer.isBuffer(content)) {
         content = content.toString("base64");
       } else if (typeof content === "string") {
         content = Buffer.from(content).toString("base64");
