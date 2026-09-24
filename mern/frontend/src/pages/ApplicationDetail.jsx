@@ -281,16 +281,32 @@ const ApplicationDetail = () => {
     }
   };
 
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailCooldown, setEmailCooldown] = useState(0);
+
   const handleSendOfferLetterEmail = async () => {
-    if (!offerLetter) return;
+    if (!offerLetter || isSendingEmail || emailCooldown > 0) return;
     
+    setIsSendingEmail(true);
     try {
       await offerLetterService.sendOfferLetterEmail(offerLetter._id, {
         recipientEmail: offerLetter.email
       });
       toast.success('Offer letter emailed successfully!');
+      setEmailCooldown(30);
+      const timer = setInterval(() => {
+        setEmailCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to email offer letter');
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to email offer letter');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -911,10 +927,11 @@ const ApplicationDetail = () => {
                           Download PDF
                         </button>
                         <button 
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                           onClick={handleSendOfferLetterEmail}
+                          disabled={isSendingEmail || emailCooldown > 0}
                         >
-                          Send Email
+                          {isSendingEmail ? 'Sending...' : emailCooldown > 0 ? 'Please wait...' : 'Send Email'}
                         </button>
                         <button 
                           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded transition-colors"

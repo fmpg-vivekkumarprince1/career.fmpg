@@ -63,6 +63,7 @@ async function findOfferLetterByIdentifier(identifier, populate = "userId") {
 
 // Email setup
 const { sendMail } = require("../config/emailTransporter");
+const { checkCooldown, recordSend } = require("../utils/cooldownManager");
 const transporter = {
     sendMail: (options) => sendMail(options)
 };
@@ -554,6 +555,15 @@ exports.sendOfferLetterEmail = async (req, res) => {
 
         const emailRecipient = recipientEmail || offerLetter.email;
 
+        // Enforce 30-second cooldown per candidate to prevent accidental multiple dispatches
+        const cooldown = checkCooldown(emailRecipient, 30);
+        if (!cooldown.allowed) {
+            return res.status(429).json({
+                message: `Please wait ${cooldown.remainingSeconds} seconds before sending another email to this candidate.`,
+                remainingSeconds: cooldown.remainingSeconds
+            });
+        }
+
         // If there's an application, use the application-based acceptance URL
         // Otherwise, use a direct offer letter acceptance URL
         let acceptanceUrl = '';
@@ -614,6 +624,7 @@ exports.sendOfferLetterEmail = async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
+        recordSend(emailRecipient);
         console.log(`Offer letter emailed with acceptance link to: ${emailRecipient}`);
 
         try {

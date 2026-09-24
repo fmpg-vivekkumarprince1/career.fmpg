@@ -32,6 +32,7 @@ function resolveBackendAssetPath(...segments) {
 
 // Email setup
 const { sendMail } = require("../config/emailTransporter");
+const { checkCooldown, recordSend } = require("../utils/cooldownManager");
 const transporter = {
     sendMail: (options) => sendMail(options)
 };
@@ -624,6 +625,15 @@ exports.sendCertificateEmail = async (req, res) => {
             return res.status(400).json({ message: "Recipient email is required" });
         }
 
+        // Enforce 30-second cooldown per recipient to prevent accidental multiple sends
+        const cooldown = checkCooldown(emailToSend, 30);
+        if (!cooldown.allowed) {
+            return res.status(429).json({
+                message: `Please wait ${cooldown.remainingSeconds} seconds before sending another email to this recipient.`,
+                remainingSeconds: cooldown.remainingSeconds
+            });
+        }
+
         if (recipientEmail && recipientEmail !== certificate.recipientEmail) {
             certificate.recipientEmail = recipientEmail;
             await certificate.save();
@@ -642,6 +652,7 @@ exports.sendCertificateEmail = async (req, res) => {
             pdfBuffer,
             `certificate-${certificate._id}.pdf`
         );
+        recordSend(emailToSend);
 
         try { await logAudit({ req, action: "EMAIL", resourceEntity: "Certificate", resourceId: certificate._id, changes: { recipientEmail: emailToSend } }); } catch (err) { }
 
