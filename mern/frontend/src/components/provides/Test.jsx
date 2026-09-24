@@ -1,8 +1,5 @@
 import React from 'react';
-//  import Breadcrumb from '../components/Breadcrumb';
 import { Link } from 'react-router';
-import '../../App.css';
-// import img from '../assets/img/icon/arrow-right2.svg'
  const test = () => {
    return (
     <>

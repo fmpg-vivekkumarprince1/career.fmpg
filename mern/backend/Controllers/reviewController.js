@@ -2,6 +2,14 @@ const Review = require("../models/review");
 const User = require("../models/user");
 const OfferLetter = require("../models/offerLetter");
 
+// In-memory cache for approved reviews
+const approvedReviewsCache = new Map();
+const REVIEW_CACHE_TTL_MS = 60 * 1000;
+
+const invalidateReviewCache = () => {
+    approvedReviewsCache.clear();
+};
+
 // Submit a new review (for authenticated employees/offer recipients)
 const submitReview = async (req, res) => {
     try {
@@ -81,10 +89,16 @@ const submitReview = async (req, res) => {
     }
 };
 
-// Get all approved reviews (public endpoint)
+// Get all approved reviews (public endpoint - cached for performance)
 const getApprovedReviews = async (req, res) => {
     try {
         const { page = 1, limit = 10, rating, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+        const cacheKey = `${page}:${limit}:${rating || 'all'}:${sortBy}:${sortOrder}`;
+
+        const cached = approvedReviewsCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < REVIEW_CACHE_TTL_MS)) {
+            return res.status(200).json(cached.data);
+        }
 
         const filter = { status: 'approved' };
         if (rating && rating !== 'all') {
@@ -125,7 +139,7 @@ const getApprovedReviews = async (req, res) => {
             return { rating, count };
         });
 
-        res.status(200).json({
+        const responsePayload = {
             reviews,
             pagination: {
                 total,
@@ -138,7 +152,11 @@ const getApprovedReviews = async (req, res) => {
                 totalReviews: stats.totalReviews,
                 ratingDistribution: distribution
             }
-        });
+        };
+
+        approvedReviewsCache.set(cacheKey, { data: responsePayload, timestamp: Date.now() });
+
+        res.status(200).json(responsePayload);
 
     } catch (error) {
         console.error("Error fetching reviews:", error);
@@ -259,6 +277,7 @@ const approveReview = async (req, res) => {
         }
 
         await review.save();
+        invalidateReviewCache();
 
         res.status(200).json({
             message: "Review approved successfully",
@@ -310,6 +329,7 @@ const rejectReview = async (req, res) => {
         }
 
         await review.save();
+        invalidateReviewCache();
 
         res.status(200).json({
             message: "Review rejected successfully",
@@ -409,6 +429,8 @@ const updateReview = async (req, res) => {
         if (!review) {
             return res.status(404).json({ message: "Review not found" });
         }
+
+        invalidateReviewCache();
 
         res.status(200).json({
             message: "Review updated successfully",

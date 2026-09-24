@@ -273,17 +273,19 @@ const EmployeeProfile = () => {
     );
   }
 
+  if (loading) {
+    return <Loader fullPage={true} text="Loading profile..." />;
+  }
+
   return (
     <div className="ui-page">
-      {(loading || formLoading || loadingApplication) && (
-        <Loader 
-          fullPage={true} 
-          text={
-            loading ? "Loading profile..." : 
-            formLoading ? "Submitting recommendation..." : 
-            "Fetching application details..."
-          } 
-        />
+      {(formLoading || loadingApplication) && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-full bg-slate-900/90 px-4 py-2.5 text-white shadow-xl backdrop-blur border border-slate-700">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+          <span className="text-xs font-semibold">
+            {formLoading ? "Submitting recommendation..." : "Fetching application details..."}
+          </span>
+        </div>
       )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header with Action Button */}

@@ -77,9 +77,12 @@ const applicationSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// Compound index for status and date filtering
+// Compound indexes for fast status, user, and job queries
 applicationSchema.index({ status: 1, createdAt: -1 });
 applicationSchema.index({ jobId: 1, status: 1 });
+applicationSchema.index({ userId: 1, createdAt: -1 });
+applicationSchema.index({ userId: 1, jobId: 1 });
+applicationSchema.index({ jobId: 1, createdAt: -1 });
 
 applicationSchema.pre('validate', async function() {
   if (!this.slug || this.isModified('fullName')) {

@@ -18,3 +18,19 @@ export const getCache = (key) => {
 
   return cached.value;
 };
+
+export const deleteCache = (key) => {
+  if (!key) {
+    cache.clear();
+    return;
+  }
+  cache.delete(key);
+};
+
+export const clearCachePattern = (prefix) => {
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) {
+      cache.delete(key);
+    }
+  }
+};

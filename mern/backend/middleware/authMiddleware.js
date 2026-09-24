@@ -30,8 +30,10 @@ const auth = async (req, res, next) => {
         const decoded = jwt.verify(token, authConfig.jwtSecret);
         authLog(`Auth: valid for ${decoded.userId}`);
 
-        // Fetch full user details to populate permissions and assignedJobs
-        const user = await User.findById(decoded.userId);
+        // Fetch user details with projection and lean() for optimal speed
+        const user = await User.findById(decoded.userId)
+            .select('name email role department position permissions assignedJobs status employeeId')
+            .lean();
 
         if (!user) {
             authLog("Auth: user not found");
@@ -40,7 +42,7 @@ const auth = async (req, res, next) => {
 
         // Attach user to request object as a plain JS object for more robust property access
         req.user = {
-            ...user.toObject(),
+            ...user,
             userId: user._id.toString() // For compatibility with existing code
         };
 
@@ -67,10 +69,12 @@ const optionalAuth = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, authConfig.jwtSecret);
-        const user = await User.findById(decoded.userId);
+        const user = await User.findById(decoded.userId)
+            .select('name email role department position permissions assignedJobs status employeeId')
+            .lean();
         if (user) {
             req.user = {
-                ...user.toObject(),
+                ...user,
                 userId: user._id.toString()
             };
         }

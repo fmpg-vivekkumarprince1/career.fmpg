@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { isTokenExpired } from '../utils/tokenUtils';
+import { clearCachePattern } from '../utils/cache';
 
 const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:4001' : '')).replace(/\/+$/, '');
 const buildApiUrl = (endpoint) => `${API_URL}${endpoint}`;
@@ -191,7 +192,10 @@ export const jobService = {
     }
     
     // If no image, proceed with regular JSON request
-    return api.post('/api/jobs', jobData);
+    return api.post('/api/jobs', jobData).then(res => {
+      clearCachePattern('jobs:');
+      return res;
+    });
   },
   updateJob: (id, jobData, onUploadProgress = null) => {
     // Check if jobData contains an image file
@@ -221,13 +225,22 @@ export const jobService = {
       // Use the file upload instance with progress tracking
       return apiFileUpload.put(`/api/jobs/${id}`, formData, {
         onUploadProgress: onUploadProgress
+      }).then(res => {
+        clearCachePattern('jobs:');
+        return res;
       });
     }
     
     // If no image, proceed with regular JSON request
-    return api.put(`/api/jobs/${id}`, jobData);
+    return api.put(`/api/jobs/${id}`, jobData).then(res => {
+      clearCachePattern('jobs:');
+      return res;
+    });
   },
-  deleteJob: (id) => api.delete(`/api/jobs/${id}`),
+  deleteJob: (id) => api.delete(`/api/jobs/${id}`).then(res => {
+    clearCachePattern('jobs:');
+    return res;
+  }),
 
   
   // New question-related endpoints
@@ -261,13 +274,25 @@ export const applicationService = {
   createApplication: (formData, onUploadProgress = null) => {
     return apiFileUpload.post('/api/applications', formData, {
       onUploadProgress: onUploadProgress
+    }).then(res => {
+      clearCachePattern('my_apps:');
+      clearCachePattern('jobs:');
+      return res;
     });
   },
   updateApplication: (id, applicationData) => api.put(`/api/applications/${id}`, applicationData),
-  deleteApplication: (id) => api.delete(`/api/applications/${id}`),
+  deleteApplication: (id) => api.delete(`/api/applications/${id}`).then(res => {
+    clearCachePattern('my_apps:');
+    clearCachePattern('jobs:');
+    return res;
+  }),
   
   // Application status management
-  updateApplicationStatus: (id, statusData) => api.put(`/api/applications/${id}/status`, statusData),
+  updateApplicationStatus: (id, statusData) => api.put(`/api/applications/${id}/status`, statusData).then(res => {
+    clearCachePattern('my_apps:');
+    clearCachePattern('jobs:');
+    return res;
+  }),
   generateOfferLetter: (applicationId, offerDetails) => api.post(`/api/applications/${applicationId}/offer`, offerDetails),
   getApplicationOfferLetter: (applicationId) => api.get(`/api/applications/${applicationId}/offer-letter`),
   getMyApplicationOfferLetter: (applicationId) => api.get(`/api/applications/my/${applicationId}/offer-letter`),

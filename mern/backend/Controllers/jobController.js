@@ -14,6 +14,20 @@ const publicJobFilter = {
   ]
 };
 
+// In-memory cache for fast public reads
+let publicJobsCache = null;
+let publicJobsCacheTime = 0;
+let featuredJobsCache = null;
+let featuredJobsCacheTime = 0;
+const JOB_CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+const invalidateJobCache = () => {
+  publicJobsCache = null;
+  publicJobsCacheTime = 0;
+  featuredJobsCache = null;
+  featuredJobsCacheTime = 0;
+};
+
 const isAdminUser = (user) => ['admin', 'super-admin'].includes((user?.role || '').toLowerCase());
 
 const canManageJob = (user, job) => {
@@ -188,6 +202,8 @@ exports.createJob = async (req, res) => {
       changes: { new: savedJob.toObject() }
     });
 
+    invalidateJobCache();
+
     res.status(201).json({
       message: "Job posted successfully",
       job: savedJob
@@ -199,17 +215,22 @@ exports.createJob = async (req, res) => {
   }
 };
 
-// Featured jobs
+// Featured jobs (cached)
 exports.getFeaturedJobs = async (req, res) => {
-  console.log("Jobs: featured");
   try {
-    // Active jobs
+    if (featuredJobsCache && (Date.now() - featuredJobsCacheTime < JOB_CACHE_TTL_MS)) {
+      return res.status(200).json(featuredJobsCache);
+    }
+
     const featuredJobs = await Job.find(publicJobFilter)
-      .sort({ createdAt: -1 }) // Newest first
-      .limit(5) // 5 max
+      .select('-questions')
+      .sort({ createdAt: -1 })
+      .limit(5)
       .lean();
 
-    console.log(`Found: ${featuredJobs.length}`);
+    featuredJobsCache = featuredJobs;
+    featuredJobsCacheTime = Date.now();
+
     res.status(200).json(featuredJobs);
   } catch (error) {
     console.error("Error:", error.message);
@@ -217,10 +238,14 @@ exports.getFeaturedJobs = async (req, res) => {
   }
 };
 
-// All active jobs
+// All active jobs (cached for public/anonymous users, lean & questions excluded)
 exports.getJobs = async (req, res) => {
-  console.log("Jobs: active");
   try {
+    const isPublicUser = !req.user;
+    if (isPublicUser && publicJobsCache && (Date.now() - publicJobsCacheTime < JOB_CACHE_TTL_MS)) {
+      return res.status(200).json(publicJobsCache);
+    }
+
     let query = publicJobFilter;
 
     if (isAdminUser(req.user)) {
@@ -241,11 +266,15 @@ exports.getJobs = async (req, res) => {
       }
     }
 
-    const jobs = await Job.find(query).populate('postedBy', 'name email').sort({ createdAt: -1 }).lean();
+    const jobs = await Job.find(query)
+      .select('-questions')
+      .populate('postedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
 
     if (req.user) {
       const Application = require("../models/application");
-      const applications = await Application.find({ userId: req.user._id }).select('jobId status');
+      const applications = await Application.find({ userId: req.user._id }).select('jobId status').lean();
       const applicationMap = new Map(applications.map(app => [app.jobId.toString(), app.status]));
 
       const jobsWithStatus = jobs.map(job => ({
@@ -253,11 +282,13 @@ exports.getJobs = async (req, res) => {
         applicationStatus: applicationMap.get(job._id.toString())
       }));
 
-      console.log(`Found: ${jobsWithStatus.length} (with status)`);
       return res.status(200).json(jobsWithStatus);
     }
 
-    console.log(`Found: ${jobs.length}`);
+    // Cache public response
+    publicJobsCache = jobs;
+    publicJobsCacheTime = Date.now();
+
     res.status(200).json(jobs);
   } catch (error) {
     console.error("Error:", error.message);
@@ -425,6 +456,8 @@ exports.updateJob = async (req, res) => {
       }
     });
 
+    invalidateJobCache();
+
     res.status(200).json({
       message: "Job updated successfully",
       job
@@ -489,6 +522,8 @@ exports.deleteJob = async (req, res) => {
         }
       }
     });
+
+    invalidateJobCache();
 
     console.log(`Permanently deleted job: ${existingJob.title} (${existingJob._id})`);
     res.status(200).json({

@@ -1,6 +1,4 @@
 import React from 'react'
-// import Breadcrumb from '../components/Breadcrumb';
-import '../../App.css';
 
 const TestJob = () => {
   return (

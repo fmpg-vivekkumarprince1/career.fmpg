@@ -1490,13 +1490,18 @@ exports.getDashboardStats = async (req, res) => {
     const { model } = require("mongoose");
     require("../models/certificate");
 
-    // Run aggregations in parallel to speed up
+    const dayAgo = new Date();
+    dayAgo.setDate(dayAgo.getDate() - 1);
+
+    // Run all aggregations and counts in parallel for fastest response
     const [
       appStats,
       jobCountsAgg,
       totalJobsCount,
       certificatesCount,
-      recentApps
+      recentApps,
+      hiredApps,
+      recentApplicationsCount
     ] = await Promise.all([
       Application.aggregate([{ $match: dateMatch }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
       Application.aggregate([{ $match: dateMatch }, { $group: { _id: "$jobId", count: { $sum: 1 } } }]),
@@ -1507,7 +1512,9 @@ exports.getDashboardStats = async (req, res) => {
         .limit(10)
         .populate('jobId', 'title company slug')
         .populate('userId', 'name email avatar')
-        .lean()
+        .lean(),
+      Application.find({ ...dateMatch, status: 'hired' }).select('createdAt updatedAt').lean(),
+      Application.countDocuments({ ...dateMatch, createdAt: { $gte: dayAgo } })
     ]);
 
     let totalApplications = 0;
@@ -1534,7 +1541,6 @@ exports.getDashboardStats = async (req, res) => {
       : 0;
 
     // Time to hire - average days for 'hired' applications
-    const hiredApps = await Application.find({ ...dateMatch, status: 'hired' }).select('createdAt updatedAt').lean();
     let totalDays = 0;
     if (hiredApps.length > 0) {
       hiredApps.forEach(app => {
@@ -1543,11 +1549,6 @@ exports.getDashboardStats = async (req, res) => {
       });
     }
     const timeToHire = hiredApps.length > 0 ? totalDays / hiredApps.length : 0;
-
-    // Recent applications (last 24 hours)
-    const dayAgo = new Date();
-    dayAgo.setDate(dayAgo.getDate() - 1);
-    const recentApplicationsCount = await Application.countDocuments({ ...dateMatch, createdAt: { $gte: dayAgo } });
 
     res.status(200).json({
       totalApplications,

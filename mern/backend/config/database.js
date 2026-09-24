@@ -21,7 +21,13 @@ const connectDB = async () => {
   console.log(`URI: ${process.env.MONGO_URI.substring(0, 10)}...`);
 
   connectionPromise = mongoose
-    .connect(process.env.MONGO_URI)
+    .connect(process.env.MONGO_URI, {
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4
+    })
     .then((connection) => {
       console.log(`Connected: ${connection.connection.host}`);
       console.log(`DB: ${connection.connection.name}`);

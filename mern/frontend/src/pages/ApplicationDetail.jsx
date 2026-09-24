@@ -52,30 +52,31 @@ const ApplicationDetail = () => {
     try {
       setLoading(true);
       const appResponse = await applicationService.getApplicationById(id);
-      console.log(appResponse.data);
-      setApplication(appResponse.data);
+      const appData = appResponse.data;
+      setApplication(appData);
       
-      // Load offer letter details if application has an offer letter
-      const targetAppId = appResponse.data._id || id;
-      if (appResponse.data.offerLetterId) {
-        try {
-          const offerLetterResponse = await applicationService.getApplicationOfferLetter(targetAppId);
-          setOfferLetter(offerLetterResponse.data);
-          console.log('Offer letter loaded:', offerLetterResponse.data);
-        } catch (offerErr) {
-          console.error('Error loading offer letter:', offerErr);
-          // Fallback to the populated offerLetterId from application data
-          setOfferLetter(appResponse.data.offerLetterId);
+      // Set job details from the jobId object in application data
+      if (appData.jobId) {
+        setJob(appData.jobId);
+      }
+
+      // Reuse already populated offer letter object or fetch if only ID was returned
+      const targetAppId = appData._id || id;
+      if (appData.offerLetterId) {
+        if (typeof appData.offerLetterId === 'object' && appData.offerLetterId._id) {
+          setOfferLetter(appData.offerLetterId);
+        } else {
+          applicationService.getApplicationOfferLetter(targetAppId)
+            .then(res => setOfferLetter(res.data))
+            .catch(err => {
+              console.error('Error loading offer letter:', err);
+              setOfferLetter(appData.offerLetterId);
+            });
         }
       }
       
-      // Set job details from the jobId object in application data
-      if (appResponse.data.jobId) {
-        setJob(appResponse.data.jobId);
-      }
-      
-      // Load contract details if application has been offered or hired
-      if (appResponse.data.status === 'offered' || appResponse.data.status === 'hired') {
+      // Load contract details if application has been offered or hired in parallel
+      if (appData.status === 'offered' || appData.status === 'hired') {
         loadContractDetails(targetAppId);
       }
     } catch (err) {
@@ -455,16 +456,13 @@ const ApplicationDetail = () => {
         </button>
       </div>
 
-      {(statusUpdateLoading || isProcessing || offerLetterLoading || contractLoading) && (
-        <Loader 
-          fullPage={true} 
-          text={
-            statusUpdateLoading ? "Updating status..." : 
-            isProcessing ? "Processing..." : 
-            offerLetterLoading ? "Loading offer letter..." : 
-            "Loading contract details..."
-          } 
-        />
+      {(statusUpdateLoading || isProcessing) && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-xl">
+          <span className="h-5 w-5 block animate-spin rounded-full border-2 border-emerald-100 border-t-emerald-600" />
+          <span className="text-sm font-semibold text-slate-700">
+            {statusUpdateLoading ? "Updating status..." : "Processing..."}
+          </span>
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

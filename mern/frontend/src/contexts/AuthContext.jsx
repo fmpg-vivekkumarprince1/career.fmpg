@@ -8,8 +8,28 @@ import Loader from '../components/common/Loader';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token && !authService.isTokenExpired()) {
+        return getCache('user') || authService.getCurrentUser();
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  });
+
+  const [loading, setLoading] = useState(() => {
+    try {
+      const token = localStorage.getItem('token');
+      const cachedUser = getCache('user') || authService.getCurrentUser();
+      // Only block UI if there is a token but we have no cached user data at all
+      return Boolean(token && !authService.isTokenExpired() && !cachedUser);
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     const initAuth = async () => {
@@ -19,6 +39,7 @@ export const AuthProvider = ({ children }) => {
       if (token && !authService.isTokenExpired()) {
         if (cachedUser) {
           setCurrentUser(cachedUser);
+          setLoading(false); // Immediate unblock
         }
         
         try {
@@ -27,9 +48,8 @@ export const AuthProvider = ({ children }) => {
           const freshUser = response.data.user;
           setCurrentUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
-          console.log('AuthContext: User synced with backend:', freshUser.email);
+          setCache('user', freshUser, 3600000);
         } catch (error) {
-          console.error('AuthContext: Sync failed:', error);
           if (error.response?.status === 401) {
             authService.clearAuthData();
             setCurrentUser(null);

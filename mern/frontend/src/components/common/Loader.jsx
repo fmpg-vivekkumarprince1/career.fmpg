@@ -25,13 +25,13 @@ const Loader = ({ fullPage = false, inline = false, size = 'md', text = '' }) =>
   return (
     <div
       className={fullPage
-        ? 'fixed inset-0 z-[1000] flex items-center justify-center bg-white/82 p-6 backdrop-blur-sm'
+        ? 'flex min-h-[50vh] w-full flex-col items-center justify-center p-8'
         : 'flex min-h-40 w-full items-center justify-center p-8'}
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_18px_45px_-28px_rgba(15,23,42,0.4)]">
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         {spinner}
         <span className="text-sm font-semibold text-slate-700">{text || 'Loading…'}</span>
       </div>

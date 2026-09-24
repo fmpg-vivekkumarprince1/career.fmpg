@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { reviewService } from '../services/api';
+import { getCache, setCache } from '../utils/cache';
 import HeroSection from '../components/hero/HeroSection';
 import { toast } from 'react-toastify';
 
@@ -10,9 +11,9 @@ import { motion } from 'framer-motion';
 
 const Home = () => {
   const location = useLocation();
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState(() => getCache('home:approved_reviews') || []);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !getCache('home:approved_reviews'));
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -25,18 +26,24 @@ const Home = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      const cachedReviews = getCache('home:approved_reviews');
+      if (cachedReviews && Array.isArray(cachedReviews) && cachedReviews.length > 0) {
+        setReviews(cachedReviews);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        
         // Fetch approved reviews
         const reviewsResponse = await reviewService.getApprovedReviews({ limit: 10 });
-        setReviews(reviewsResponse.data.reviews || []);
-        
-    } catch (err) {
+        const list = reviewsResponse.data.reviews || [];
+        setReviews(list);
+        setCache('home:approved_reviews', list, 300000); // 5 min client cache
+      } catch (err) {
         console.error('Error fetching data:', err);
         const msg = 'Failed to load data';
         setError(msg);
-        toast.error(msg);
       } finally {
         setLoading(false);
       }

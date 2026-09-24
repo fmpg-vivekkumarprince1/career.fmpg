@@ -12,19 +12,34 @@ import { toast } from 'react-toastify';
 import { Share2 } from 'lucide-react';
 
 const Jobs = () => {
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   const { currentUser, isAdmin, isHR, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [animateList, setAnimateList] = useState(false);
+  const canManageJobs = isAdmin || (isHR && currentUser?.permissions?.canManageJobs === true);
+  const jobsCacheKey = currentUser?._id ? `jobs:${currentUser._id}` : 'jobs:public';
+
+  const [jobs, setJobs] = useState(() => {
+    try {
+      const cached = getCache(currentUser?._id ? `jobs:${currentUser._id}` : 'jobs:public');
+      return Array.isArray(cached) && cached.length > 0 ? cached : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cached = getCache(currentUser?._id ? `jobs:${currentUser._id}` : 'jobs:public');
+      return !(Array.isArray(cached) && cached.length > 0);
+    } catch {
+      return true;
+    }
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState(window.innerWidth < 640 ? 'compact' : 'detailed');
   const [isScrolling, setIsScrolling] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const searchInputRef = useRef(null);
@@ -34,12 +49,16 @@ const Jobs = () => {
   const [jobToDelete, setJobToDelete] = useState(null);
   const [sharingJob, setSharingJob] = useState(null);
   const [publicationUpdatingId, setPublicationUpdatingId] = useState(null);
-  const canManageJobs = isAdmin || (isHR && currentUser?.permissions?.canManageJobs === true);
-  const jobsCacheKey = currentUser?._id ? `jobs:${currentUser._id}` : 'jobs:public';
 
   const enrichJobsWithApplicationStatus = async (jobsList) => {
     if (!currentUser || currentUser.role !== 'user' || !Array.isArray(jobsList) || jobsList.length === 0) {
       return Array.isArray(jobsList) ? jobsList : [];
+    }
+
+    // If backend already included application status in job objects, reuse it immediately
+    const alreadyHasStatus = jobsList.some((job) => job.applicationStatus !== undefined);
+    if (alreadyHasStatus) {
+      return jobsList;
     }
 
     try {
@@ -118,39 +137,16 @@ const Jobs = () => {
     loadJobs();
   }, []);
 
-  useEffect(() => {
-    if (!loading && jobs.length > 0) {
-      setAnimateList(true);
-    }
-  }, [loading, jobs]);
-
-  // Simulate loading progress for better UX
-  useEffect(() => {
-    if (loading) {
-      const interval = setInterval(() => {
-        setLoadingProgress(prev => {
-          const newProgress = prev + Math.random() * 15;
-          return newProgress > 90 ? 90 : newProgress;
-        });
-      }, 200);
-
-      return () => {
-        clearInterval(interval);
-        setLoadingProgress(100);
-      };
-    }
-  }, [loading]);
-
   const loadJobs = async () => {
-    setLoading(true);
-    setLoadingProgress(0);
+    if (jobs.length === 0) {
+      setLoading(true);
+    }
 
     const cachedJobs = canManageJobs ? null : getCache(jobsCacheKey);
     if (cachedJobs && Array.isArray(cachedJobs) && cachedJobs.length > 0 && cachedJobs.every(j => j.slug)) {
       const cachedJobsWithStatus = await enrichJobsWithApplicationStatus(cachedJobs);
       setJobs(cachedJobsWithStatus);
       setLoading(false);
-      setAnimateList(true);
       return;
     }
 
@@ -161,7 +157,6 @@ const Jobs = () => {
       if (!canManageJobs) {
         setCache(jobsCacheKey, jobsWithStatus, 300000); // Cache per viewer for 5 minutes
       }
-      setAnimateList(true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error loading jobs');
     } finally {
@@ -474,45 +469,28 @@ const Jobs = () => {
 
       {/* Jobs listing section */}
       <div className="w-full space-y-6">
-        {loading ? (
-          <div className="fmpg-card overflow-hidden p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <svg className="animate-spin w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="text-green-400">Loading Jobs...</span>
-              </h2>
-              <div className="w-24 bg-gray-700 h-2.5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-green-400 to-emerald-600 transition-all duration-300"
-                  style={{ width: `${loadingProgress}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {[...Array(5)].map((_, index) => (
-                <div key={index} className="bg-gray-800/30 border border-gray-700/50 rounded-xl overflow-hidden p-5 animate-pulse">
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <div className="flex-1 flex gap-4">
-                      <div className="hidden sm:block h-16 w-16 bg-gray-700 rounded-lg"></div>
-                      <div className="w-full">
-                        <div className="h-6 bg-gray-700 rounded w-3/4 mb-3"></div>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <div className="h-4 bg-gray-700 rounded w-1/4"></div>
-                          <div className="h-4 bg-gray-700 rounded w-1/4"></div>
-                          <div className="h-4 bg-gray-700 rounded w-1/6"></div>
-                        </div>
+        {(loading && jobs.length === 0) ? (
+          <div className="space-y-4">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="fmpg-card overflow-hidden p-5 animate-pulse">
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                  <div className="flex-1 flex gap-4">
+                    <div className="hidden sm:block h-14 w-14 bg-slate-200 rounded-xl"></div>
+                    <div className="w-full space-y-2.5">
+                      <div className="h-5 bg-slate-200 rounded-md w-1/3"></div>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <div className="h-4 bg-slate-200 rounded w-20"></div>
+                        <div className="h-4 bg-slate-200 rounded w-24"></div>
+                        <div className="h-4 bg-slate-200 rounded w-16"></div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 items-center justify-end">
-                      <div className="h-9 bg-gray-700 rounded-lg w-24"></div>
-                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="h-9 bg-slate-200 rounded-lg w-24"></div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         ) : (filteredJobs.length === 0) ? (
           <div className="fmpg-card overflow-hidden p-10">
@@ -535,11 +513,10 @@ const Jobs = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredJobs.map((job, index) => (
+            {filteredJobs.map((job) => (
               <div
                 key={job._id}
-                className={`fmpg-card overflow-hidden ${animateList ? 'animate-fade-in-up' : 'opacity-0'}`}
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="fmpg-card overflow-hidden"
               >
                 <div>
                   <div

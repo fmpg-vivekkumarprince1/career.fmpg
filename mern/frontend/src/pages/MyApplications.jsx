@@ -10,21 +10,40 @@ import { formatCurrencyValue } from '../utils/currencyUtils';
 import { getResumeViewUrl } from '../utils/urlUtils';
 
 
+import { getCache, setCache } from '../utils/cache';
+
 const MyApplications = () => {
-  const [applications, setApplications] = useState([]);
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const cacheKey = currentUser?._id ? `my_apps:${currentUser._id}` : null;
+
+  const [applications, setApplications] = useState(() => {
+    if (!cacheKey) return [];
+    try {
+      const cached = getCache(cacheKey);
+      return Array.isArray(cached) ? cached : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [selectedApplication, setSelectedApplication] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (!cacheKey) return true;
+    try {
+      const cached = getCache(cacheKey);
+      return !(Array.isArray(cached) && cached.length > 0);
+    } catch {
+      return true;
+    }
+  });
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [offerLetters, setOfferLetters] = useState({});
   const [jobDetails, setJobDetails] = useState({});
   const [jobUpdateNotifications, setJobUpdateNotifications] = useState([]);
-
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     if (!currentUser) {
@@ -54,7 +73,9 @@ const MyApplications = () => {
   }, [copiedId]);
 
   const loadMyApplications = async () => {
-    setLoading(true);
+    if (applications.length === 0) {
+      setLoading(true);
+    }
 
     try {
       const [applicationsResponse, notificationsResponse] = await Promise.all([
@@ -63,6 +84,9 @@ const MyApplications = () => {
       ]);
 
       setApplications(applicationsResponse.data);
+      if (cacheKey) {
+        setCache(cacheKey, applicationsResponse.data, 60000);
+      }
 
       // Build a local lookup for already-populated job details without extra API calls.
       const jobDetailsObj = {};

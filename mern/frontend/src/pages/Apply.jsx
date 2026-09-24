@@ -94,27 +94,36 @@ const Apply = () => {
           setFormData(prev => ({ ...prev, fullName: currentUser.name }));
         }
 
-        setLoadingQuestions(true);
-        try {
-          const questionsResponse = await jobService.getJobQuestions(actualJobId);
-          if (!isActive) return;
-          const questions = questionsResponse.data;
+        let questions = Array.isArray(fetchedJob.questions) && fetchedJob.questions.length > 0
+          ? fetchedJob.questions
+          : null;
 
-          const sortedQuestions = [...questions].sort((a, b) => a.order - b.order);
-          setJobQuestions(sortedQuestions);
-
-          const initialAnswers = sortedQuestions.map(question => ({
-            questionId: question._id,
-            questionText: question.questionText,
-            questionType: question.questionType,
-            answer: question.questionType === 'checkbox' ? [] : ''
-          }));
-          setQuestionAnswers(initialAnswers);
-        } catch (err) {
-          console.error("Error loading job questions:", err);
-        } finally {
+        if (!questions) {
+          setLoadingQuestions(true);
+          try {
+            const questionsResponse = await jobService.getJobQuestions(actualJobId);
+            if (!isActive) return;
+            questions = questionsResponse.data || [];
+          } catch (err) {
+            console.error("Error loading job questions:", err);
+            questions = [];
+          } finally {
+            if (isActive) setLoadingQuestions(false);
+          }
+        } else {
           setLoadingQuestions(false);
         }
+
+        const sortedQuestions = [...questions].sort((a, b) => (a.order || 0) - (b.order || 0));
+        setJobQuestions(sortedQuestions);
+
+        const initialAnswers = sortedQuestions.map(question => ({
+          questionId: question._id,
+          questionText: question.questionText,
+          questionType: question.questionType,
+          answer: question.questionType === 'checkbox' ? [] : ''
+        }));
+        setQuestionAnswers(initialAnswers);
 
         // Check if user has already applied for this job
         if (currentUser) {

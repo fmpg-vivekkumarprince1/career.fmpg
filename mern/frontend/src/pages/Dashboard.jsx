@@ -32,7 +32,9 @@ const ApplicationsDashboard = () => {
   }, [dateRange]);
 
   const loadData = async () => {
-    setLoading(true);
+    if (jobs.length === 0 && stats.totalApplications === 0) {
+      setLoading(true);
+    }
     try {
       const [statsRes, jobsRes] = await Promise.all([
         applicationService.getDashboardStats(dateRange),

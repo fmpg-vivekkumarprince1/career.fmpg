@@ -311,8 +311,6 @@ const ReviewForm = () => {
             </motion.div>
           </div>
 
-          {submitting && <Loader fullPage={true} text="Submitting your review..." />}
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Rating Section */}
