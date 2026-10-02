@@ -228,235 +228,317 @@ exports.generateCertificate = async (req, res) => {
 };
 
 // ============================================================
-// PDFKit-native certificate generation (no canvas dependency)
-// ============================================================
-// ============================================================
-// Modern Stylized Certificate Generation
+// Certificate PDF (PDFKit-native, no canvas dependency)
+// ------------------------------------------------------------
+// A4 landscape. The statement is set left-aligned on white paper, and a
+// deep-green panel on the right carries the logo, the verification seal and
+// the certificate details. Colours, fonts and issuer details are the
+// constants directly below, so the look can be changed in one place.
 // ============================================================
 
-const C = {
-    black: '#0d0d0d',
-    dark2: '#1c1c1c',
-    dark3: '#252525',
-    lime: '#d6f300',
-    limeDim: '#a8c200',
-    white: '#ffffff',
-    offWhite: '#e8e8e8',
-    gray1: '#aaaaaa',
-    gray2: '#666666',
-};
-
-const W = 841.89;
+const W = 841.89; // A4 landscape, in PDF points
 const H = 595.28;
 
-function roundRect(doc, x, y, w, h, r) {
-    const rr = Math.min(r, w / 2, h / 2);
-    doc.moveTo(x + rr, y)
-        .lineTo(x + w - rr, y)
-        .quadraticCurveTo(x + w, y, x + w, y + rr)
-        .lineTo(x + w, y + h - rr)
-        .quadraticCurveTo(x + w, y + h, x + w - rr, y + h)
-        .lineTo(x + rr, y + h)
-        .quadraticCurveTo(x, y + h, x, y + h - rr)
-        .lineTo(x, y + rr)
-        .quadraticCurveTo(x, y, x + rr, y)
-        .closePath();
+const THEME = {
+    ink: '#14231d',           // title, recipient name, values
+    body: '#3f4c46',          // running text
+    muted: '#6d7973',         // labels and fine print
+    rule: '#dde3df',          // hairlines on paper
+    accent: '#b08a3e',        // brass, on paper
+    panel: '#123a2e',         // verification panel
+    panelText: '#ffffff',
+    panelMuted: '#a9c1b7',
+    panelRule: '#2d5647',     // hairlines on the panel
+    panelAccent: '#d9bd7c',   // brass, on the panel
+    sealPaper: '#ffffff',     // disc behind the QR code
+};
+
+// Built-in PDF fonts: nothing to bundle, so this works on serverless hosts.
+// They only cover Latin characters. To use a brand typeface, register the font
+// file with doc.registerFont() in generateCertificatePDFBuffer and name it here.
+const FONT = {
+    sans: 'Helvetica',
+    sansBold: 'Helvetica-Bold',
+    serif: 'Times-Roman',
+    serifItalic: 'Times-Italic',
+};
+
+// PDFKit positions text by the top of its line box. These ascents (as a
+// fraction of the font size) let the layout place text on a baseline instead,
+// which keeps text of different sizes aligned. Add an entry for any other
+// font named in FONT; 0.72 is assumed otherwise.
+const ASCENT = {
+    'Helvetica': 0.718,
+    'Helvetica-Bold': 0.718,
+    'Times-Roman': 0.683,
+    'Times-Italic': 0.683,
+};
+
+const ISSUER = {
+    name: 'FMPG',
+    website: 'fmpg.in',
+    logoAsset: ['assets', 'logo_dryukr.png'],
+    signatories: [
+        { name: 'Vivek Kumar', title: 'Founder & Director' },
+        { name: 'FMPG Team', title: 'HR Manager' },
+    ],
+};
+
+// Page geometry
+const PANEL_W = 244;
+const PANEL_X = W - PANEL_W;
+const PANEL_PAD = 28;
+const MARGIN = 60;                          // left edge of the statement column
+const CONTENT_W = PANEL_X - MARGIN - 56;    // width of the statement column
+
+// Recipient name: one line at up to NAME_MAX, shrinking to NAME_MIN, after
+// which it is set on two lines.
+const NAME_MAX = 46;
+const NAME_MIN = 30;
+const NAME_WRAPPED_MAX = 38;
+const NAME_TRACKING = -0.4;
+
+function textWidth(doc, str, { font, size, tracking = 0 }) {
+    return doc.font(font).fontSize(size).widthOfString(str, { characterSpacing: tracking });
 }
 
-function textCenter(doc, str, y, opts = {}) {
-    const tw = doc.widthOfString(str);
-    doc.text(str, (W - tw) / 2, y, { lineBreak: false, ...opts });
+// Draws a single line of text with its baseline at `baseline`, starting at x
+// (or centred on x with align: 'center'). Returns the width of the line.
+function drawText(doc, str, x, baseline, { font, size, color, tracking = 0, align = 'left' }) {
+    const width = textWidth(doc, str, { font, size, tracking });
+    const left = align === 'center' ? x - width / 2 : x;
+    doc.fillColor(color);
+    doc.text(str, left, baseline - (ASCENT[font] || 0.72) * size, { lineBreak: false, characterSpacing: tracking });
+    return width;
 }
 
-function hex2rgb(h) {
-    const v = parseInt(h.replace('#', ''), 16);
-    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+// Draws a horizontal hairline.
+function drawRule(doc, x, y, width, color, weight = 0.6) {
+    doc.save();
+    doc.lineWidth(weight).strokeColor(color);
+    doc.moveTo(x, y).lineTo(x + width, y).stroke();
+    doc.restore();
 }
 
-function lerpColor(a, b, t) {
-    const ca = hex2rgb(a), cb = hex2rgb(b);
-    return [
-        Math.round(ca[0] + (cb[0] - ca[0]) * t),
-        Math.round(ca[1] + (cb[1] - ca[1]) * t),
-        Math.round(ca[2] + (cb[2] - ca[2]) * t),
-    ];
+// Shortens `str` with an ellipsis until it fits `maxWidth` in the given style.
+function fitText(doc, str, maxWidth, style) {
+    if (textWidth(doc, str, style) <= maxWidth) return str;
+    let keep = 0;
+    let limit = str.length;
+    while (keep < limit) {
+        const mid = Math.ceil((keep + limit) / 2);
+        if (textWidth(doc, `${str.slice(0, mid)}…`, style) <= maxWidth) keep = mid; else limit = mid - 1;
+    }
+    return `${str.slice(0, keep).trimEnd()}…`;
 }
 
-function drawBackground(doc) {
-    doc.rect(0, 0, W, H).fill(C.black);
-
-    for (let i = 18; i >= 0; i--) {
-        const r = 320 * (i / 18);
-        const lv = Math.round(8 * (i / 18));
-        const col = `#${[lv + 14, lv + 16, 0].map(x => Math.min(x, 255).toString(16).padStart(2, '0')).join('')}`;
-        doc.circle(W * 0.82, H * 0.18, r).fill(col);
-    }
-
-    for (let i = 14; i >= 0; i--) {
-        const r = 240 * (i / 14);
-        const lv = Math.round(6 * (i / 14));
-        const col = `#${[lv + 12, lv + 14, 0].map(x => Math.min(x, 255).toString(16).padStart(2, '0')).join('')}`;
-        doc.circle(W * 0.12, H * 0.85, r).fill(col);
-    }
-
-    doc.rect(0, 0, W, 6).fill(C.lime);
-    doc.rect(0, H - 6, W, 6).fill(C.lime);
-    doc.rect(0, 6, 5, H - 12).fill(C.limeDim);
-    doc.rect(W - 5, 6, 5, H - 12).fill(C.limeDim);
-
-    doc.save();
-    doc.rect(22, 22, W - 44, H - 44).lineWidth(0.8).strokeColor(C.limeDim).stroke();
-    doc.restore();
-
-    [[22, 22], [W - 38, 22], [22, H - 38], [W - 38, H - 38]].forEach(([cx, cy]) => {
-        doc.rect(cx, cy, 16, 16).fill(C.lime);
-    });
-
-    doc.save();
-    doc.lineWidth(0.4).strokeColor(C.lime).opacity(0.12);
-    for (let i = 0; i < 8; i++) {
-        const offset = 30 + i * 14;
-        doc.moveTo(5, offset).lineTo(offset, 5).stroke();
-    }
-    doc.restore();
-
-    doc.save();
-    doc.lineWidth(0.4).strokeColor(C.lime).opacity(0.12);
-    for (let i = 0; i < 8; i++) {
-        const offset = 30 + i * 14;
-        doc.moveTo(W - 5, H - offset).lineTo(W - offset, H - 5).stroke();
-    }
-    doc.restore();
-
-    // Separator lines
-    doc.save();
-    doc.lineWidth(0.6).strokeColor(C.lime).opacity(0.5);
-    doc.moveTo(50, 118).lineTo(W - 50, 118).stroke();
-    doc.restore();
-
-    doc.save();
-    doc.lineWidth(0.6).strokeColor(C.lime).opacity(0.5);
-    doc.moveTo(50, H - 125).lineTo(W - 50, H - 125).stroke();
-    doc.restore();
-
-    [[50, 118], [W - 50, 118], [50, H - 125], [W - 50, H - 125]].forEach(([dx, dy]) => {
-        doc.circle(dx, dy, 3).fill(C.lime);
-    });
-
-    // Logo
-    const logoX = W / 2 - 95, logoY = 34, logoW = 190, logoH = 40;
-    doc.save();
-    roundRect(doc, logoX, logoY, logoW, logoH, 10);
-    doc.fill(C.dark2);
-    doc.restore();
-
-    doc.rect(logoX, logoY, 5, logoH).fill(C.lime);
-
-    let logoDrawn = false;
-    try {
-        const logoPath = resolveBackendAssetPath("assets", "logo_dryukr.png");
-        if (logoPath) {
-            doc.image(logoPath, logoX + 12, logoY + 6, { height: logoH - 12 });
-            logoDrawn = true;
+// Breaks `str` into at most `maxLines` lines no wider than `maxWidth`. Whatever
+// does not fit on the last line is cut short with an ellipsis.
+function wrapLines(doc, str, maxWidth, style, maxLines) {
+    const words = String(str).trim().split(/\s+/);
+    const lines = [];
+    let line = words.shift() || '';
+    while (words.length && lines.length < maxLines - 1) {
+        const next = `${line} ${words[0]}`;
+        if (textWidth(doc, next, style) <= maxWidth) {
+            line = next;
+            words.shift();
+        } else {
+            lines.push(line);
+            line = words.shift();
         }
-    } catch (e) { }
-
-    if (!logoDrawn) {
-        doc.font('Helvetica-Bold').fontSize(22).fillColor(C.lime);
-        doc.text('FMPG', logoX + 12, logoY + 7, { lineBreak: false });
     }
-
-    doc.font('Helvetica-Bold').fontSize(16).fillColor(C.lime);
-    doc.text('FMPG', logoX + 55, logoY + 12, { lineBreak: false });
-
-    doc.circle(W / 2, logoY - 10, 2.5).fill(C.lime);
+    lines.push([line, ...words].join(' '));
+    return lines.map((l) => fitText(doc, l, maxWidth, style));
 }
 
-function drawQR(doc, url, qrX, qrY, qrSize) {
-    const qrData = QRCode.create(url, { errorCorrectionLevel: 'H' });
-    const modules = qrData.modules.size;
-    const pad = qrSize * 0.028;
-    const effective = qrSize - pad * 2;
-    const modSize = effective / modules;
+// Works out how to set the recipient's name in a column `maxWidth` wide.
+// Returns the font size and the one or two lines to draw.
+function layoutName(doc, name, maxWidth) {
+    const style = (size) => ({ font: FONT.serif, size, tracking: NAME_TRACKING });
 
-    roundRect(doc, qrX, qrY, qrSize, qrSize, 6);
-    doc.fill(C.black);
+    for (let size = NAME_MAX; size >= NAME_MIN; size--) {
+        if (textWidth(doc, name, style(size)) <= maxWidth) return { size, lines: [name] };
+    }
 
-    doc.save();
-    roundRect(doc, qrX, qrY, qrSize, qrSize, 6);
-    doc.lineWidth(1).strokeColor(C.limeDim).stroke();
-    doc.restore();
+    // Too long for one line: break between words where the two lines come out
+    // most even, at the largest size at which both fit.
+    const words = name.split(/\s+/);
+    for (let size = NAME_WRAPPED_MAX; size >= NAME_MIN; size--) {
+        let best = null;
+        for (let i = 1; i < words.length; i++) {
+            const lines = [words.slice(0, i).join(' '), words.slice(i).join(' ')];
+            const firstWidth = textWidth(doc, lines[0], style(size));
+            if (firstWidth > maxWidth) break;
+            const widest = Math.max(firstWidth, textWidth(doc, lines[1], style(size)));
+            if (widest <= maxWidth && (!best || widest < best.widest)) best = { lines, widest };
+        }
+        if (best) return { size, lines: best.lines };
+    }
 
-    const getCol = (row) => lerpColor(C.lime, C.white, row / (modules - 1));
+    // Still too long: fill the first line and cut the second short.
+    return { size: NAME_MIN, lines: wrapLines(doc, name, maxWidth, style(NAME_MIN), 2) };
+}
 
-    const drawEye = (row, col) => {
-        const cx = qrX + pad + (col + 3.5) * modSize;
-        const cy = qrY + pad + (row + 3.5) * modSize;
-        const ec = getCol(row + 3.5);
-        doc.circle(cx, cy, 3.5 * modSize).fill(ec);
-        doc.circle(cx, cy, 2.5 * modSize).fill(C.black);
-        doc.circle(cx, cy, 1.5 * modSize).fill(ec);
+// Deterministic random numbers seeded from a string (FNV-1a hash feeding
+// mulberry32), so a certificate always renders the same seal.
+function seededRandom(seed) {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) {
+        h ^= seed.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    let a = h >>> 0;
+    return () => {
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-
-    for (let r = 0; r < modules; r++) {
-        for (let c = 0; c < modules; c++) {
-            if (!qrData.modules.get(r, c)) continue;
-            const tl = r < 7 && c < 7;
-            const tr = r < 7 && c >= modules - 7;
-            const bl = r >= modules - 7 && c < 7;
-            if (tl || tr || bl) {
-                if (r === 0 && c === 0) drawEye(0, 0);
-                if (r === 0 && c === modules - 7) drawEye(0, modules - 7);
-                if (r === modules - 7 && c === 0) drawEye(modules - 7, 0);
-                continue;
-            }
-            const cx = qrX + pad + c * modSize + modSize / 2;
-            const cy = qrY + pad + r * modSize + modSize / 2;
-            doc.circle(cx, cy, (modSize / 2) * 0.92).fill(getCol(r));
-        }
-    }
-
-    const bLen = 10, bW = 1.5, bp = -5;
-    [
-        [qrX + bp, qrY + bp, 1, 1],
-        [qrX + qrSize - bp, qrY + bp, -1, 1],
-        [qrX + bp, qrY + qrSize - bp, 1, -1],
-        [qrX + qrSize - bp, qrY + qrSize - bp, -1, -1],
-    ].forEach(([cx, cy, dx, dy]) => {
-        doc.save();
-        doc.lineWidth(bW).strokeColor(C.lime);
-        doc.moveTo(cx, cy).lineTo(cx + dx * bLen, cy).stroke();
-        doc.moveTo(cx, cy).lineTo(cx, cy + dy * bLen).stroke();
-        doc.restore();
-    });
 }
 
-function drawSignatureBlock(doc, x, y, label, name) {
-    doc.font('Helvetica-Bold').fontSize(10).fillColor(C.white);
-    doc.text(name, x, y - 12, { lineBreak: false, width: 130 });
+// Draws the modules of a QR code as plain squares into a side x side square.
+// The caller leaves the clear space scanners need around it.
+function drawQRModules(doc, qr, x, y, side, color) {
+    const count = qr.modules.size;
+    const cell = side / count;
+
+    // All modules go into one path with one fill. Filling them one by one
+    // leaves hairline seams between neighbours in some PDF viewers.
+    for (let row = 0; row < count; row++) {
+        let runStart = -1;
+        for (let col = 0; col <= count; col++) {
+            const dark = col < count && qr.modules.get(row, col);
+            if (dark && runStart < 0) runStart = col;
+            if (!dark && runStart >= 0) {
+                doc.rect(x + runStart * cell, y + row * cell, (col - runStart) * cell, cell);
+                runStart = -1;
+            }
+        }
+    }
+    doc.fill(color);
+}
+
+// Verification seal: a guilloche ring (the woven line-work of banknotes and
+// share certificates) around the QR code. The weave and the tick marks outside
+// it are derived from the certificate ID, so every certificate carries its own
+// pattern.
+function drawSeal(doc, cx, cy, radius, certificateId, verifyUrl) {
+    const id = String(certificateId);
+    const rand = seededRandom(id);
+    const between = (min, max) => min + Math.floor(rand() * (max - min + 1));
+    const round = (v) => Math.round(v * 100) / 100;
+
+    const discR = radius * 0.64;            // white disc holding the QR code
+    const bandIn = discR + 6;
+    const bandOut = radius - 12;
+    const bandMid = (bandIn + bandOut) / 2;
+    const bandAmp = (bandOut - bandIn) / 2;
+
+    // Guilloche: two mirrored ribbons, each a bundle of near-parallel waves.
+    const lobes = between(6, 11);                       // waves around the ring
+    const strands = between(8, 11);                     // lines per ribbon
+    const spread = (1.25 + rand() * 0.5) / strands;     // phase step between lines
+    const scallops = rand() < 0.5 ? lobes * 2 : 0;      // optional breathing of the width
+    const turn = rand() * Math.PI * 2;
+    const steps = 360;
 
     doc.save();
-    doc.lineWidth(0.8).strokeColor(C.limeDim);
-    doc.moveTo(x, y).lineTo(x + 130, y).stroke();
+    doc.lineWidth(0.38).strokeColor(THEME.panelAccent).lineJoin('round');
+    [1, -1].forEach((side) => {
+        for (let s = 0; s < strands; s++) {
+            const phase = (s - (strands - 1) / 2) * spread;
+            for (let i = 0; i <= steps; i++) {
+                const t = (Math.PI * 2 * i) / steps;
+                const swell = scallops ? 0.8 + 0.2 * Math.cos(scallops * (t + turn)) : 1;
+                const r = bandMid + side * bandAmp * swell * Math.sin(lobes * (t + turn) + phase);
+                const px = round(cx + r * Math.cos(t));
+                const py = round(cy + r * Math.sin(t));
+                if (i === 0) doc.moveTo(px, py); else doc.lineTo(px, py);
+            }
+        }
+    });
+    doc.stroke();
+
+    // Rings framing the band
+    doc.lineWidth(0.6);
+    doc.circle(cx, cy, bandIn - 2.5).stroke();
+    doc.circle(cx, cy, radius).stroke();
+
+    // Tick ring: the certificate ID written out as 96 bits, clockwise from the
+    // top. A long tick is a 1, a short tick is a 0.
+    const hex = /^[0-9a-f]{24}$/i.test(id) ? id : null;
+    const bitAt = (i) => (hex
+        ? (parseInt(hex[i >> 2], 16) >> (3 - (i & 3))) & 1
+        : Math.round(rand()));
+    const tickOuter = radius - 3;
+    doc.lineWidth(0.7);
+    for (let i = 0; i < 96; i++) {
+        const t = (Math.PI * 2 * i) / 96 - Math.PI / 2;
+        const tickInner = tickOuter - (bitAt(i) ? 5.5 : 2.2);
+        doc.moveTo(round(cx + tickInner * Math.cos(t)), round(cy + tickInner * Math.sin(t)))
+            .lineTo(round(cx + tickOuter * Math.cos(t)), round(cy + tickOuter * Math.sin(t)));
+    }
+    doc.stroke();
     doc.restore();
 
-    doc.circle(x, y, 2.5).fill(C.lime);
+    // QR code on a white disc, sized so that each corner of the code keeps four
+    // modules of clear space, in every direction, before the edge of the disc.
+    // Level Q tolerates 25% damage and gives larger modules than H would.
+    const qr = QRCode.create(verifyUrl, { errorCorrectionLevel: 'Q' });
+    const qrSide = (2 * discR) / (Math.SQRT2 + 8 / qr.modules.size);
+    doc.circle(cx, cy, discR).fill(THEME.sealPaper);
+    drawQRModules(doc, qr, cx - qrSide / 2, cy - qrSide / 2, qrSide, THEME.panel);
 
-    doc.font('Helvetica').fontSize(8).fillColor(C.gray1);
-    doc.text(label, x, y + 6, { lineBreak: false, width: 130 });
+    // In a PDF viewer, clicking the seal opens the verification page.
+    doc.link(cx - radius, cy - radius, radius * 2, radius * 2, verifyUrl);
+}
+
+// Logo and wordmark at the top of the panel. If the logo file is missing or
+// unreadable, the wordmark is drawn on its own.
+function drawBrand(doc, x, y, height) {
+    let textX = x;
+    let needsWordmark = true;
+    try {
+        const logo = doc.openImage(resolveBackendAssetPath(...ISSUER.logoAsset));
+        const ratio = logo.width / logo.height;
+        const width = Math.min(height * ratio, PANEL_W - PANEL_PAD * 2);
+        doc.image(logo, x, y, { fit: [width, height], valign: 'center' });
+        // A wide logo already spells the name out; a square one is only the mark.
+        needsWordmark = ratio < 1.8;
+        textX = x + width + 10;
+    } catch (e) {
+        console.warn(`Certificate logo not drawn: ${e.message}`);
+    }
+
+    if (needsWordmark) {
+        drawText(doc, ISSUER.name, textX, y + height / 2 + 5.6, {
+            font: FONT.sansBold, size: 16, color: THEME.panelText, tracking: 0.8,
+        });
+    }
+}
+
+function drawSignatureBlock(doc, x, y, width, { name, title }) {
+    const nameStyle = { font: FONT.serifItalic, size: 16 };
+    const titleStyle = { font: FONT.sans, size: 8.5 };
+
+    drawText(doc, fitText(doc, name, width, nameStyle), x, y - 9, { ...nameStyle, color: THEME.ink });
+
+    drawRule(doc, x, y, width, THEME.ink);
+    drawText(doc, fitText(doc, title, width, titleStyle), x, y + 14, { ...titleStyle, color: THEME.muted });
 }
 
 async function generateCertificatePDFBuffer(certificate) {
-    console.log(`Generating stylized certificate for: ${certificate.name}`);
+    console.log(`Generating certificate PDF for: ${certificate.name}`);
 
-    const {
-        _id,
-        name,
-        jobrole: role,
-        domain: department,
-        fromDate,
-        toDate,
-    } = certificate;
+    const { _id, fromDate, toDate } = certificate;
+
+    // Tidy the text fields: single spaces, and a length cap far beyond what fits
+    // on the page, so layout time stays bounded whatever is stored.
+    const clean = (value) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, 300);
+    const name = clean(certificate.name);
+    const role = clean(certificate.jobrole) || '—';
+    const department = clean(certificate.domain) || '—';
 
     let verifyBase = (process.env.FRONTEND_URL || 'https://fmpg.vercel.app').replace(/\/+$/, '');
     // Ensure localhost uses http to avoid SSL errors during development
@@ -464,130 +546,168 @@ async function generateCertificatePDFBuffer(certificate) {
         verifyBase = verifyBase.replace('https://', 'http://');
     }
     const verifyUrl = `${verifyBase}/verify/${_id}`;
+    const verifyPage = `${verifyBase.replace(/^https?:\/\//, '')}/verify`;
 
     const fmt = (d) => d
         ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
 
+    // Issue date: when the certificate was created, or failing that the time
+    // encoded in its ObjectId.
+    const issuedOn = certificate.createdAt
+        || (_id && typeof _id.getTimestamp === 'function' ? _id.getTimestamp() : null);
+
     const doc = new PDFDocument({
-        size: [W, H],
-        layout: 'landscape',
-        margins: { top: 0, bottom: 0, left: 0, right: 0 },
         autoFirstPage: false,
         info: {
             Title: `Internship Certificate - ${name}`,
-            Author: 'FMPG',
+            Author: ISSUER.name,
             Subject: 'Internship Completion Certificate',
         },
     });
 
-    doc.addPage({ size: [W, H], margins: { top: 0, bottom: 0, left: 0, right: 0 } });
-
     const buffers = [];
-    doc.on('data', (b) => buffers.push(b));
-
-    drawBackground(doc);
-
-    // ── HEADER ──────────────────────────────────────────────────────────────────
-    doc.font('Helvetica-Bold').fontSize(24).fillColor(C.white);
-    textCenter(doc, 'INTERNSHIP COMPLETION CERTIFICATE', 132);
-
-    const titleStr = 'INTERNSHIP COMPLETION CERTIFICATE';
-    doc.font('Helvetica-Bold').fontSize(24);
-    const titleW = doc.widthOfString(titleStr);
-    doc.save();
-    doc.lineWidth(1.5).strokeColor(C.lime);
-    doc.moveTo((W - titleW) / 2, 162).lineTo((W + titleW) / 2, 162).stroke();
-    doc.restore();
-
-    doc.font('Helvetica').fontSize(10).fillColor(C.gray1);
-    textCenter(doc, 'Presented by FMPG · fmpg.in', 170);
-
-    // ── BODY ────────────────────────────────────────────────────────────────────
-    doc.font('Helvetica').fontSize(12).fillColor(C.gray1);
-    textCenter(doc, 'This is to certify that', 196);
-
-    doc.font('Helvetica-Bold').fontSize(40).fillColor(C.lime);
-    textCenter(doc, name, 212);
-
-    doc.font('Helvetica-Bold').fontSize(40);
-    const nameW = doc.widthOfString(name);
-    doc.save();
-    doc.lineWidth(1).strokeColor(C.limeDim).opacity(0.6);
-    doc.moveTo((W - nameW) / 2, 260).lineTo((W + nameW) / 2, 260).stroke();
-    doc.restore();
-
-    doc.font('Helvetica').fontSize(11).fillColor(C.gray1);
-    textCenter(doc, 'has successfully completed the internship program in', 268);
-
-    const roleLabel = `${role}  ·  ${department}`;
-    doc.font('Helvetica-Bold').fontSize(12).fillColor(C.lime);
-    const roleW = doc.widthOfString(roleLabel);
-    const pillX = (W - roleW - 40) / 2;
-    const pillY = 284;
-
-    roundRect(doc, pillX, pillY, roleW + 40, 24, 12);
-    doc.fill(C.dark3);
-    doc.save();
-    roundRect(doc, pillX, pillY, roleW + 40, 24, 12);
-    doc.lineWidth(0.8).strokeColor(C.limeDim).stroke();
-    doc.restore();
-
-    doc.font('Helvetica-Bold').fontSize(12).fillColor(C.lime);
-    doc.text(roleLabel, pillX + 20, pillY + 6, { lineBreak: false });
-
-    doc.font('Helvetica').fontSize(10).fillColor(C.gray1);
-    const durLine = `Duration :  ${fmt(fromDate)}  -  ${fmt(toDate)}`;
-    textCenter(doc, durLine, 320);
-
-    doc.font('Helvetica').fontSize(9).fillColor(C.gray2);
-    textCenter(doc, 'in recognition of outstanding commitment, professionalism, and dedication to learning.', 336);
-
-    // ── FOOTER ──────────────────────────────────────────────────────────────────
-    const qrSize = 68;
-    const qrX = 50;
-    const qrY = H - 110;
-    drawQR(doc, verifyUrl, qrX, qrY, qrSize);
-
-    doc.font('Helvetica').fontSize(7).fillColor(C.gray2);
-    doc.text('Scan to verify', qrX, qrY + qrSize + 8, { lineBreak: false, width: qrSize, align: 'center' });
-
-    const metaX = 175;
-    const metaStartY = H - 104;
-
-    const metaRows = [
-        ['Certificate ID', `FMPG-${_id}`],
-        ['Verify At', verifyUrl],
-    ];
-
-    metaRows.forEach(([label, value], i) => {
-        const rowY = metaStartY + i * 18;
-        doc.font('Helvetica').fontSize(8).fillColor(C.gray2);
-        doc.text(label + ' :', metaX, rowY, { lineBreak: false });
-        doc.font('Helvetica-Bold').fontSize(8).fillColor(C.offWhite);
-        // Reduced width to avoid overlap with signatures
-        doc.text(value, metaX + 80, rowY, { lineBreak: false, width: 250, ellipsis: true });
-    });
-
-    doc.rect(metaX - 12, metaStartY, 2, 32).fill(C.limeDim);
-
-    drawSignatureBlock(doc, W - 310, metaStartY + 4, 'Founder & Director', 'Vivek Kumar');
-    drawSignatureBlock(doc, W - 160, metaStartY + 4, 'HR Manager', 'FMPG Team');
-
-    doc.font('Helvetica').fontSize(7).fillColor(C.gray2);
-    doc.text(
-        'This is a digitally issued certificate and is valid without a physical signature. Verify at fmpg.in/verify',
-        50,
-        H - 32,
-        { lineBreak: false, width: W - 100, align: 'center' }
-    );
-
-    doc.end();
-
-    return new Promise((resolve, reject) => {
+    const finished = new Promise((resolve, reject) => {
+        doc.on('data', (b) => buffers.push(b));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', reject);
     });
+
+    doc.addPage({ size: [W, H], margins: { top: 0, bottom: 0, left: 0, right: 0 } });
+
+    // ── HEADER ──────────────────────────────────────────────────────────────────
+    drawText(doc, 'Internship Completion Certificate', MARGIN, 70, {
+        font: FONT.sansBold, size: 15, color: THEME.ink, tracking: 0.2,
+    });
+    drawText(doc, `Presented by ${ISSUER.name} · ${ISSUER.website}`, MARGIN, 88, {
+        font: FONT.sans, size: 9.5, color: THEME.muted,
+    });
+
+    // ── BODY ────────────────────────────────────────────────────────────────────
+    const certifyStyle = { font: FONT.serifItalic, size: 15, color: THEME.muted };
+    const statementStyle = { font: FONT.sans, size: 11, color: THEME.body };
+    const labelStyle = { font: FONT.sans, size: 8.5, color: THEME.muted };
+    const valueStyle = { font: FONT.sansBold, size: 10.5, color: THEME.ink };
+    const STATEMENT_LEADING = 17;
+    const VALUE_LEADING = 14;
+    const ROW_H = 24;           // height of a one-line row in the details table
+    const LABEL_W = 78;         // width of the table's label column
+
+    const nameLayout = layoutName(doc, name, CONTENT_W);
+    const nameStyle = { font: FONT.serif, size: nameLayout.size, color: THEME.ink, tracking: NAME_TRACKING };
+    const nameLeading = nameLayout.size * 1.12;
+
+    const statementLines = wrapLines(
+        doc,
+        `has successfully completed the internship program at ${ISSUER.name}. `
+        + 'This certificate is awarded in recognition of outstanding commitment, '
+        + 'professionalism, and dedication to learning.',
+        Math.min(CONTENT_W, 430),
+        statementStyle,
+        4
+    );
+
+    // Long roles and domains run onto a second line rather than being cut off.
+    const facts = [
+        ['Role', role],
+        ['Domain', department],
+        ['Duration', `${fmt(fromDate)} – ${fmt(toDate)}`],
+    ].map(([label, value]) => {
+        const lines = wrapLines(doc, value, CONTENT_W - LABEL_W, valueStyle, 2);
+        return { label, lines, height: ROW_H + (lines.length - 1) * VALUE_LEADING };
+    });
+    const factsHeight = facts.reduce((sum, row) => sum + row.height, 0);
+
+    // Vertical steps from one element to the next, top to bottom.
+    const step = {
+        toCertify: 11,
+        toName: 16 + nameLayout.size * 0.68,
+        toRule: nameLayout.size * 0.22 + 10,
+        toStatement: 30,
+        toFacts: 26,
+    };
+    const bodyHeight = step.toCertify + step.toName + (nameLayout.lines.length - 1) * nameLeading
+        + step.toRule + step.toStatement + (statementLines.length - 1) * STATEMENT_LEADING
+        + step.toFacts + factsHeight;
+
+    // Centre the body between the header and the signatures.
+    const BODY_TOP = 112, BODY_BOTTOM = 440;
+    let y = BODY_TOP + Math.max(0, (BODY_BOTTOM - BODY_TOP - bodyHeight) / 2);
+
+    y += step.toCertify;
+    drawText(doc, 'This is to certify that', MARGIN, y, certifyStyle);
+
+    y += step.toName;
+    nameLayout.lines.forEach((line, i) => {
+        if (i > 0) y += nameLeading;
+        drawText(doc, line, MARGIN, y, nameStyle);
+    });
+
+    y += step.toRule;
+    doc.rect(MARGIN, y, 44, 2).fill(THEME.accent);
+
+    y += step.toStatement;
+    statementLines.forEach((line, i) => {
+        if (i > 0) y += STATEMENT_LEADING;
+        drawText(doc, line, MARGIN, y, statementStyle);
+    });
+
+    y += step.toFacts;
+    facts.forEach((row) => {
+        drawRule(doc, MARGIN, y, CONTENT_W, THEME.rule);
+        drawText(doc, row.label, MARGIN, y + 15.5, labelStyle);
+        row.lines.forEach((line, i) => {
+            drawText(doc, line, MARGIN + LABEL_W, y + 15.5 + i * VALUE_LEADING, valueStyle);
+        });
+        y += row.height;
+    });
+    drawRule(doc, MARGIN, y, CONTENT_W, THEME.rule);
+
+    // ── SIGNATURES ──────────────────────────────────────────────────────────────
+    const SIGN_W = 168;
+    ISSUER.signatories.forEach((signatory, i) => {
+        drawSignatureBlock(doc, MARGIN + i * (SIGN_W + 40), 486, SIGN_W, signatory);
+    });
+
+    const FOOT_BASELINE = 542;
+    drawText(doc, 'This is a digitally issued certificate and is valid without a physical signature.', MARGIN, FOOT_BASELINE, {
+        font: FONT.sans, size: 7.5, color: THEME.muted,
+    });
+
+    // ── VERIFICATION PANEL ──────────────────────────────────────────────────────
+    doc.rect(PANEL_X, 0, PANEL_W, H).fill(THEME.panel);
+
+    const panelLeft = PANEL_X + PANEL_PAD;
+    const panelInner = PANEL_W - PANEL_PAD * 2;
+    const panelCentre = PANEL_X + PANEL_W / 2;
+
+    drawBrand(doc, panelLeft, 50, 28);
+
+    const sealRadius = panelInner / 2;
+    const sealY = 246;
+    drawSeal(doc, panelCentre, sealY, sealRadius, _id, verifyUrl);
+    drawText(doc, 'Scan to verify', panelCentre, sealY + sealRadius + 20, {
+        font: FONT.sans, size: 8.5, color: THEME.panelMuted, align: 'center',
+    });
+
+    const META_PITCH = 34;
+    const meta = [
+        { label: 'Certificate ID', value: `FMPG-${_id}` },
+        issuedOn && { label: 'Issued on', value: fmt(issuedOn) },
+        { label: 'Verify at', value: verifyPage, link: verifyUrl },
+    ].filter(Boolean);
+    meta.forEach(({ label, value, link }, i) => {
+        const baseline = FOOT_BASELINE - (meta.length - 1 - i) * META_PITCH;
+        const metaValueStyle = { font: FONT.sansBold, size: 9, color: THEME.panelText };
+        drawRule(doc, panelLeft, baseline - 25, panelInner, THEME.panelRule);
+        drawText(doc, label, panelLeft, baseline - 13, { font: FONT.sans, size: 7.5, color: THEME.panelMuted });
+        const width = drawText(doc, fitText(doc, value, panelInner, metaValueStyle), panelLeft, baseline, metaValueStyle);
+        if (link) doc.link(panelLeft, baseline - 9, width, 12, link);
+    });
+
+    doc.end();
+
+    return finished;
 }
 
 
