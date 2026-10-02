@@ -575,7 +575,7 @@ async function generateCertificatePDFBuffer(certificate) {
 
     doc.addPage({ size: [W, H], margins: { top: 0, bottom: 0, left: 0, right: 0 } });
 
-    // ── HEADER ──────────────────────────────────────────────────────────────────
+    // HEADER
     drawText(doc, 'Internship Completion Certificate', MARGIN, 70, {
         font: FONT.sansBold, size: 15, color: THEME.ink, tracking: 0.2,
     });
@@ -583,7 +583,7 @@ async function generateCertificatePDFBuffer(certificate) {
         font: FONT.sans, size: 9.5, color: THEME.muted,
     });
 
-    // ── BODY ────────────────────────────────────────────────────────────────────
+    // BODY 
     const certifyStyle = { font: FONT.serifItalic, size: 15, color: THEME.muted };
     const statementStyle = { font: FONT.sans, size: 11, color: THEME.body };
     const labelStyle = { font: FONT.sans, size: 8.5, color: THEME.muted };
