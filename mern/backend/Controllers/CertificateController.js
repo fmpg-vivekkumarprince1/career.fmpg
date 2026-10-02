@@ -37,16 +37,48 @@ const transporter = {
     sendMail: (options) => sendMail(options)
 };
 
+// Optional details of an internship. Each one is printed on the certificate
+// only when it is given, so existing certificates are unaffected. They must
+// also exist on the Certificate schema: Mongoose drops fields it does not know.
+const OPTIONAL_TEXT_FIELDS = [
+    "recipientAffiliation",   // programme and/or college
+    "recipientId",            // roll, enrolment or intern number, with its label: "Roll no. 23BCS1045"
+    "project",                // project or area of work
+    "supervisorName",
+    "supervisorPosition",
+    "mode",                   // "On-site", "Remote", "Hybrid"
+    "performance",            // rating in the organisation's own words: "Excellent"
+    "summary",                // one or two sentences on the work done
+    "issuePlace",             // place of issue, printed after the issue date
+];
+
 exports.issue = async (req, res) => {
     console.log("Cert: new");
     try {
-        const { name, domain, jobrole, fromDate, toDate, issuedBy, email } = req.body;
+        const { name, domain, fromDate, toDate, issuedBy, email, hours } = req.body;
+        // The position held is stored as jobrole; "position" is accepted as another name for it.
+        const jobrole = req.body.jobrole || req.body.position;
         console.log(`For: ${name}`);
 
         if (!name || !domain || !jobrole || !fromDate || !toDate) {
             console.log("Missing fields");
             return res.status(400).json({ message: "All fields are required" });
         }
+
+        // Total hours worked, printed beside the duration.
+        const hasHours = hours !== undefined && hours !== null && hours !== "";
+        if (hasHours && !(Number(hours) > 0)) {
+            console.log("Bad hours");
+            return res.status(400).json({ message: "Hours must be a number greater than zero" });
+        }
+
+        // Optional text fields are stored only when something was entered.
+        const details = {};
+        OPTIONAL_TEXT_FIELDS.forEach((field) => {
+            const value = typeof req.body[field] === "string" ? req.body[field].trim() : "";
+            if (value) details[field] = value;
+        });
+        if (hasHours) details.hours = Number(hours);
 
         // Set issuer
         const userId = req.user.userId;
@@ -62,6 +94,7 @@ exports.issue = async (req, res) => {
             fromDate: new Date(fromDate),
             toDate: new Date(toDate),
             issuedBy: issuedBy || "FMPG",
+            ...details,
         }); const savedCertificate = await certificate.save();
         console.log(`Saved: ${savedCertificate._id}`);
 
@@ -230,10 +263,17 @@ exports.generateCertificate = async (req, res) => {
 // ============================================================
 // Certificate PDF (PDFKit-native, no canvas dependency)
 // ------------------------------------------------------------
-// A4 landscape. The statement is set left-aligned on white paper, and a
-// deep-green panel on the right carries the logo, the verification seal and
-// the certificate details. Colours, fonts and issuer details are the
-// constants directly below, so the look can be changed in one place.
+// A4 landscape. The statement is set left-aligned on white paper: the
+// recipient's name, the position held on a line of its own, a short summary
+// and a table of details. A deep-green panel on the right carries the logo,
+// the issuer's details, the verification seal and the certificate details.
+// Colours, fonts and issuer details are the constants directly below, so the
+// look can be changed in one place.
+//
+// Only name, jobrole, domain and the two dates are needed. Every other field
+// (affiliation, roll number, project, supervisor, mode, performance, hours,
+// summary, place of issue) is printed when the certificate has it and leaves
+// no gap when it does not.
 // ============================================================
 
 const W = 841.89; // A4 landscape, in PDF points
@@ -278,10 +318,32 @@ const ISSUER = {
     name: 'FMPG',
     website: 'fmpg.in',
     logoAsset: ['assets', 'logo_dryukr.png'],
+
+    // Printed under the logo, one line each. A line left empty is not printed.
+    address: '',              // city or registered office
+    registration: '',         // registration number with its label, e.g. 'CIN U00000XX0000PTC000000'
+    contact: '',              // email or phone a verifier can use
+
+    // Place of issue, printed after the issue date. A certificate's own
+    // issuePlace takes precedence.
+    place: '',
+
+    // Image of the organisation's seal or stamp, drawn to the right of the
+    // signatures, e.g. ['assets', 'stamp.png']. With null that space stays
+    // clear for a physical stamp.
+    stampAsset: null,
+
     signatories: [
-        { name: 'Vivek Kumar', title: 'Founder & Director' },
-        { name: 'FMPG Team', title: 'HR Manager' },
+        { name: 'Vivek Kumar', position: 'Founder & Director' },
+        { name: 'FMPG Team', position: 'HR Manager' },
     ],
+
+    // Printed after the statement when a certificate has no summary of its own.
+    defaultSummary: 'This certificate is awarded in recognition of outstanding commitment, '
+        + 'professionalism, and dedication to learning.',
+
+    // Closing line at the foot of the page.
+    note: 'This is a digitally issued certificate and is valid without a physical signature.',
 };
 
 // Page geometry
@@ -518,14 +580,61 @@ function drawBrand(doc, x, y, height) {
     }
 }
 
-function drawSignatureBlock(doc, x, y, width, { name, title }) {
+// A signatory: the name above the line, the position held below it.
+// ("title" is still read, for signatories written before it was renamed.)
+function drawSignatureBlock(doc, x, y, width, { name, position, title }) {
     const nameStyle = { font: FONT.serifItalic, size: 16 };
-    const titleStyle = { font: FONT.sans, size: 8.5 };
+    const positionStyle = { font: FONT.sans, size: 8.5 };
 
     drawText(doc, fitText(doc, name, width, nameStyle), x, y - 9, { ...nameStyle, color: THEME.ink });
 
     drawRule(doc, x, y, width, THEME.ink);
-    drawText(doc, fitText(doc, title, width, titleStyle), x, y + 14, { ...titleStyle, color: THEME.muted });
+    drawText(doc, fitText(doc, position || title || '', width, positionStyle), x, y + 14, { ...positionStyle, color: THEME.muted });
+}
+
+// The organisation's seal or stamp, fitted into a size x size square whose
+// right edge is at `right`. Skipped when no image is configured or the file
+// cannot be read.
+function drawStamp(doc, right, centreY, size) {
+    if (!ISSUER.stampAsset) return;
+    try {
+        doc.image(resolveBackendAssetPath(...ISSUER.stampAsset), right - size, centreY - size / 2, {
+            fit: [size, size], align: 'right', valign: 'center',
+        });
+    } catch (e) {
+        console.warn(`Certificate stamp not drawn: ${e.message}`);
+    }
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// A number with its unit: "12 weeks", "1 month", "480 hours".
+const plural = (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'}`;
+
+// How long the internship ran, in the words people use for it: "3 months" for
+// whole calendar months, otherwise weeks (a Monday-to-Friday stretch counts as
+// a full week), days for a short stretch that is not close to whole weeks, and
+// months again past half a year. Both dates are counted, and they are read in
+// the server's time zone, the same way the certificate prints them. Returns ''
+// when either date is missing or they are the wrong way round.
+function describeDuration(fromDate, toDate) {
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    if (!fromDate || !toDate || isNaN(from) || isNaN(to)) return '';
+
+    const firstDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    const dayAfter = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+    const days = Math.round((dayAfter - firstDay) / DAY_MS);
+    if (days < 1) return '';
+
+    const months = (dayAfter.getFullYear() - firstDay.getFullYear()) * 12 + dayAfter.getMonth() - firstDay.getMonth();
+    if (months >= 1 && dayAfter.getDate() === firstDay.getDate()) return plural(months, 'month');
+
+    const weeks = Math.round(days / 7);
+    const nearWholeWeeks = Math.abs(days - weeks * 7) <= 2;
+    if (weeks < 1 || (days < 28 && !nearWholeWeeks)) return plural(days, 'day');
+    if (days <= 182) return plural(weeks, 'week');
+    return plural(Math.round(days / 30.44), 'month');
 }
 
 async function generateCertificatePDFBuffer(certificate) {
@@ -535,10 +644,19 @@ async function generateCertificatePDFBuffer(certificate) {
 
     // Tidy the text fields: single spaces, and a length cap far beyond what fits
     // on the page, so layout time stays bounded whatever is stored.
-    const clean = (value) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, 300);
+    const clean = (value, max = 300) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, max);
     const name = clean(certificate.name);
-    const role = clean(certificate.jobrole) || '—';
-    const department = clean(certificate.domain) || '—';
+    const position = clean(certificate.jobrole) || '—';
+    const domain = clean(certificate.domain);
+    const affiliation = [clean(certificate.recipientAffiliation), clean(certificate.recipientId)].filter(Boolean).join(', ');
+    const project = clean(certificate.project);
+    const supervisorName = clean(certificate.supervisorName);
+    const supervisorPosition = clean(certificate.supervisorPosition);
+    const mode = clean(certificate.mode);
+    const performance = clean(certificate.performance);
+    const summary = clean(certificate.summary, 600) || ISSUER.defaultSummary;
+    const place = clean(certificate.issuePlace) || ISSUER.place;
+    const hours = Number(certificate.hours) > 0 ? Number(certificate.hours) : null;
 
     let verifyBase = (process.env.FRONTEND_URL || 'https://fmpg.vercel.app').replace(/\/+$/, '');
     // Ensure localhost uses http to avoid SSL errors during development
@@ -556,6 +674,19 @@ async function generateCertificatePDFBuffer(certificate) {
     // encoded in its ObjectId.
     const issuedOn = certificate.createdAt
         || (_id && typeof _id.getTimestamp === 'function' ? _id.getTimestamp() : null);
+
+    // The statement is one sentence set in three parts, so that the position
+    // held can stand on a line of its own between them:
+    //   "has successfully completed an internship at FMPG as"
+    //   Full Stack Developer Intern
+    //   "in Web Development, from 01 June 2026 to 21 August 2026."
+    const oneDay = Boolean(fromDate && toDate) && fmt(fromDate) === fmt(toDate);
+    const sentenceBefore = `has successfully completed an internship at ${ISSUER.name} as`;
+    const sentenceAfter = (domain ? `in ${domain}, ` : '')
+        + (oneDay ? `on ${fmt(fromDate)}.` : `from ${fmt(fromDate)} to ${fmt(toDate)}.`);
+
+    // Duration with the total hours beside it: "12 weeks, 480 hours".
+    const duration = [describeDuration(fromDate, toDate), hours && plural(hours, 'hour')].filter(Boolean).join(', ') || '—';
 
     const doc = new PDFDocument({
         autoFirstPage: false,
@@ -583,94 +714,132 @@ async function generateCertificatePDFBuffer(certificate) {
         font: FONT.sans, size: 9.5, color: THEME.muted,
     });
 
-    // BODY 
-    const certifyStyle = { font: FONT.serifItalic, size: 15, color: THEME.muted };
-    const statementStyle = { font: FONT.sans, size: 11, color: THEME.body };
-    const labelStyle = { font: FONT.sans, size: 8.5, color: THEME.muted };
-    const valueStyle = { font: FONT.sansBold, size: 10.5, color: THEME.ink };
-    const STATEMENT_LEADING = 17;
-    const VALUE_LEADING = 14;
-    const ROW_H = 24;           // height of a one-line row in the details table
-    const LABEL_W = 78;         // width of the table's label column
+    // BODY
+    const TEXT_W = Math.min(CONTENT_W, 430);    // measure of the running text
+    const COLUMN_GAP = 28;                      // between the two columns of the details table
+    const LABEL_W = 64;                         // width of a label in the details table
 
     const nameLayout = layoutName(doc, name, CONTENT_W);
     const nameStyle = { font: FONT.serif, size: nameLayout.size, color: THEME.ink, tracking: NAME_TRACKING };
     const nameLeading = nameLayout.size * 1.12;
 
-    const statementLines = wrapLines(
-        doc,
-        `has successfully completed the internship program at ${ISSUER.name}. `
-        + 'This certificate is awarded in recognition of outstanding commitment, '
-        + 'professionalism, and dedication to learning.',
-        Math.min(CONTENT_W, 430),
-        statementStyle,
-        4
-    );
-
-    // Long roles and domains run onto a second line rather than being cut off.
+    // Details table: the duration always, the rest when the certificate has them.
+    // The supervisor's position goes under the name as a second, lighter line.
     const facts = [
-        ['Role', role],
-        ['Domain', department],
-        ['Duration', `${fmt(fromDate)} – ${fmt(toDate)}`],
-    ].map(([label, value]) => {
-        const lines = wrapLines(doc, value, CONTENT_W - LABEL_W, valueStyle, 2);
-        return { label, lines, height: ROW_H + (lines.length - 1) * VALUE_LEADING };
-    });
-    const factsHeight = facts.reduce((sum, row) => sum + row.height, 0);
+        { label: 'Duration', value: duration },
+        { label: 'Project', value: project },
+        { label: 'Supervisor', value: supervisorName || supervisorPosition, detail: supervisorName ? supervisorPosition : '' },
+        { label: 'Mode', value: mode },
+        { label: 'Performance', value: performance },
+    ].filter((fact) => fact.value);
 
-    // Vertical steps from one element to the next, top to bottom.
-    const step = {
-        toCertify: 11,
-        toName: 16 + nameLayout.size * 0.68,
-        toRule: nameLayout.size * 0.22 + 10,
-        toStatement: 30,
-        toFacts: 26,
-    };
-    const bodyHeight = step.toCertify + step.toName + (nameLayout.lines.length - 1) * nameLeading
-        + step.toRule + step.toStatement + (statementLines.length - 1) * STATEMENT_LEADING
-        + step.toFacts + factsHeight;
+    // Sets the body out at type scale k (1 is full size). Returns its lines,
+    // each with the step down from the line before it and a function that
+    // draws it at that position, and the height of the whole body. Text is
+    // placed by its baseline; the accent bar and the table rows by their top.
+    const composeBody = (k) => {
+        const certifyStyle = { font: FONT.serifItalic, size: 15 * k, color: THEME.muted };
+        const affiliationStyle = { font: FONT.serifItalic, size: 12.5 * k, color: THEME.muted };
+        const statementStyle = { font: FONT.sans, size: 11 * k, color: THEME.body };
+        const positionStyle = { font: FONT.serif, size: 23 * k, color: THEME.ink };
+        const labelStyle = { font: FONT.sans, size: 8.5 * k, color: THEME.muted };
+        const valueStyle = { font: FONT.sansBold, size: 10.5 * k, color: THEME.ink };
+        const detailStyle = { font: FONT.sans, size: 9 * k, color: THEME.muted };
+        const STATEMENT_LEADING = 17 * k;
+        const VALUE_LEADING = 14 * k;
+        const ROW_H = 24 * k;           // height of a one-line row in the details table
 
-    // Centre the body between the header and the signatures.
-    const BODY_TOP = 112, BODY_BOTTOM = 440;
-    let y = BODY_TOP + Math.max(0, (BODY_BOTTOM - BODY_TOP - bodyHeight) / 2);
+        const lines = [];
+        const text = (step, str, style) => lines.push({ step, draw: (y) => drawText(doc, str, MARGIN, y, style) });
+        // A paragraph of at most maxLines lines: `first` is the step down to
+        // its first line and `leading` the step between its lines.
+        const paragraph = (first, leading, str, width, style, maxLines) => {
+            wrapLines(doc, str, width, style, maxLines).forEach((line, i) => text(i ? leading : first, line, style));
+        };
 
-    y += step.toCertify;
-    drawText(doc, 'This is to certify that', MARGIN, y, certifyStyle);
-
-    y += step.toName;
-    nameLayout.lines.forEach((line, i) => {
-        if (i > 0) y += nameLeading;
-        drawText(doc, line, MARGIN, y, nameStyle);
-    });
-
-    y += step.toRule;
-    doc.rect(MARGIN, y, 44, 2).fill(THEME.accent);
-
-    y += step.toStatement;
-    statementLines.forEach((line, i) => {
-        if (i > 0) y += STATEMENT_LEADING;
-        drawText(doc, line, MARGIN, y, statementStyle);
-    });
-
-    y += step.toFacts;
-    facts.forEach((row) => {
-        drawRule(doc, MARGIN, y, CONTENT_W, THEME.rule);
-        drawText(doc, row.label, MARGIN, y + 15.5, labelStyle);
-        row.lines.forEach((line, i) => {
-            drawText(doc, line, MARGIN + LABEL_W, y + 15.5 + i * VALUE_LEADING, valueStyle);
+        text(11 * k, 'This is to certify that', certifyStyle);
+        nameLayout.lines.forEach((line, i) => text(i ? nameLeading : 16 * k + nameLayout.size * 0.68, line, nameStyle));
+        if (affiliation) paragraph(nameLayout.size * 0.22 + 16 * k, 16 * k, affiliation, CONTENT_W, affiliationStyle, 2);
+        lines.push({
+            step: affiliation ? 12 * k : nameLayout.size * 0.22 + 10,
+            draw: (y) => doc.rect(MARGIN, y, 44, 2).fill(THEME.accent),
         });
-        y += row.height;
+
+        paragraph(28 * k, STATEMENT_LEADING, sentenceBefore, TEXT_W, statementStyle, 2);
+        paragraph(26 * k, 26 * k, position, CONTENT_W, positionStyle, 2);
+        paragraph(19 * k, STATEMENT_LEADING, sentenceAfter, TEXT_W, statementStyle, 2);
+        paragraph(22 * k, STATEMENT_LEADING, summary, TEXT_W, statementStyle, 4);
+
+        // Details table, two facts to a row. A long value runs onto a second
+        // line rather than being cut off, and the row grows with its tallest cell.
+        const columns = facts.length > 1 ? 2 : 1;
+        const columnW = (CONTENT_W - (columns - 1) * COLUMN_GAP) / columns;
+        const rows = [];
+        for (let i = 0; i < facts.length; i += columns) {
+            const cells = facts.slice(i, i + columns).map(({ label, value, detail }) => ({
+                label,
+                lines: wrapLines(doc, value, columnW - LABEL_W, valueStyle, 2),
+                detail: detail ? fitText(doc, detail, columnW - LABEL_W, detailStyle) : '',
+            }));
+            const tallest = Math.max(...cells.map((cell) => cell.lines.length + (cell.detail ? 1 : 0)));
+            rows.push({ cells, height: ROW_H + (tallest - 1) * VALUE_LEADING });
+        }
+        rows.forEach((row, r) => lines.push({
+            step: r ? rows[r - 1].height : 24 * k,
+            draw: (y) => {
+                drawRule(doc, MARGIN, y, CONTENT_W, THEME.rule);
+                row.cells.forEach((cell, c) => {
+                    const x = MARGIN + c * (columnW + COLUMN_GAP);
+                    drawText(doc, cell.label, x, y + 15.5 * k, labelStyle);
+                    cell.lines.forEach((line, i) => {
+                        drawText(doc, line, x + LABEL_W, y + 15.5 * k + i * VALUE_LEADING, valueStyle);
+                    });
+                    if (cell.detail) {
+                        drawText(doc, cell.detail, x + LABEL_W, y + 15.5 * k + cell.lines.length * VALUE_LEADING, detailStyle);
+                    }
+                });
+            },
+        }));
+        lines.push({
+            step: rows[rows.length - 1].height,
+            draw: (y) => drawRule(doc, MARGIN, y, CONTENT_W, THEME.rule),
+        });
+
+        return { lines, height: lines.reduce((sum, line) => sum + line.step, 0) };
+    };
+
+    // Fit the body between the header and the signatures: at full size when it
+    // fits, otherwise with smaller type. Data too long even for that is shrunk
+    // as a block, so nothing ever runs into the signatures.
+    const BODY_TOP = 112, BODY_BOTTOM = 440;
+    const room = BODY_BOTTOM - BODY_TOP;
+    let body;
+    for (const k of [1, 0.94, 0.88, 0.82]) {
+        body = composeBody(k);
+        if (body.height <= room) break;
+    }
+    const shrink = Math.min(1, room / body.height);
+
+    // Centre the body in that space.
+    let y = BODY_TOP + Math.max(0, (room - body.height) / 2);
+    doc.save();
+    if (shrink < 1) doc.scale(shrink, { origin: [MARGIN, BODY_TOP] });
+    body.lines.forEach((line) => {
+        y += line.step;
+        line.draw(y);
     });
-    drawRule(doc, MARGIN, y, CONTENT_W, THEME.rule);
+    doc.restore();
 
     // ── SIGNATURES ──────────────────────────────────────────────────────────────
     const SIGN_W = 168;
+    const SIGN_Y = 486;
     ISSUER.signatories.forEach((signatory, i) => {
-        drawSignatureBlock(doc, MARGIN + i * (SIGN_W + 40), 486, SIGN_W, signatory);
+        drawSignatureBlock(doc, MARGIN + i * (SIGN_W + 40), SIGN_Y, SIGN_W, signatory);
     });
+    drawStamp(doc, MARGIN + CONTENT_W, SIGN_Y - 4, 76);
 
     const FOOT_BASELINE = 542;
-    drawText(doc, 'This is a digitally issued certificate and is valid without a physical signature.', MARGIN, FOOT_BASELINE, {
+    drawText(doc, ISSUER.note, MARGIN, FOOT_BASELINE, {
         font: FONT.sans, size: 7.5, color: THEME.muted,
     });
 
@@ -683,6 +852,12 @@ async function generateCertificatePDFBuffer(certificate) {
 
     drawBrand(doc, panelLeft, 50, 28);
 
+    // The issuer's address, registration number and contact, under the logo.
+    const issuerStyle = { font: FONT.sans, size: 7.5, color: THEME.panelMuted };
+    [ISSUER.address, ISSUER.registration, ISSUER.contact].filter(Boolean).forEach((line, i) => {
+        drawText(doc, fitText(doc, line, panelInner, issuerStyle), panelLeft, 98 + i * 12, issuerStyle);
+    });
+
     const sealRadius = panelInner / 2;
     const sealY = 246;
     drawSeal(doc, panelCentre, sealY, sealRadius, _id, verifyUrl);
@@ -693,7 +868,7 @@ async function generateCertificatePDFBuffer(certificate) {
     const META_PITCH = 34;
     const meta = [
         { label: 'Certificate ID', value: `FMPG-${_id}` },
-        issuedOn && { label: 'Issued on', value: fmt(issuedOn) },
+        issuedOn && { label: 'Issued on', value: [fmt(issuedOn), place].filter(Boolean).join(', ') },
         { label: 'Verify at', value: verifyPage, link: verifyUrl },
     ].filter(Boolean);
     meta.forEach(({ label, value, link }, i) => {
