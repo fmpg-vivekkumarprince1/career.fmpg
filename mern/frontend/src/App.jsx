@@ -38,6 +38,7 @@ const OfferAcceptance = lazy(() => import('./pages/OfferAcceptance'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ManageHR = lazy(() => import('./pages/admin/ManageHR'));
 const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const DatabaseManager = lazy(() => import('./pages/admin/DatabaseManager'));
 const HrmsWorkspace = lazy(() => import('./pages/HrmsWorkspace'));
 const VerifyDocument = lazy(() => import('./pages/VerifyDocument'));
 
@@ -210,6 +211,14 @@ const AppContent = () => {
               element={
                 <AdminRoute>
                   <AuditLogs />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/database"
+              element={
+                <AdminRoute>
+                  <DatabaseManager />
                 </AdminRoute>
               }
             />

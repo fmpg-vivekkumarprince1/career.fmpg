@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import QuickCertificateModal from '../certificates/QuickCertificateModal';
+import { Award } from 'lucide-react';
 
 const RecentApplicationsTable = ({ applications, getJobById, getStatusLabel, initialShowAll = false }) => {
   const [showAll, setShowAll] = useState(initialShowAll);
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [selectedAppForCert, setSelectedAppForCert] = useState(null);
   
   const getStatusColor = (status) => {
     const colors = {
@@ -96,13 +100,24 @@ const RecentApplicationsTable = ({ applications, getJobById, getStatusLabel, ini
                             year: 'numeric'
                           })}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm flex items-center space-x-2">
                           <Link 
                             to={`/applications/${app.slug || app._id}`} 
                             className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-blue-400 rounded-md hover:bg-gray-800 transition-colors duration-150"
                           >
-                            <span>view more details</span>
+                            <span>view details</span>
                           </Link>
+                          <button
+                            onClick={() => {
+                              setSelectedAppForCert(app);
+                              setCertModalOpen(true);
+                            }}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-emerald-600/50 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-900/40 rounded-md transition-colors text-xs font-medium"
+                            title="Issue certificate in 1-click"
+                          >
+                            <Award className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                            Certificate
+                          </button>
                         </td>
                       </tr>
                     );
@@ -120,6 +135,27 @@ const RecentApplicationsTable = ({ applications, getJobById, getStatusLabel, ini
           </div>
         )}
       </div>
+
+      {/* Quick Certificate Modal */}
+      {selectedAppForCert && (
+        <QuickCertificateModal
+          isOpen={certModalOpen}
+          onClose={() => {
+            setCertModalOpen(false);
+            setSelectedAppForCert(null);
+          }}
+          sourceData={{
+            name: selectedAppForCert.name,
+            email: selectedAppForCert.email,
+            jobrole: getJobById ? getJobById(selectedAppForCert.jobId)?.title : (selectedAppForCert.jobTitle || 'Intern'),
+            domain: getJobById ? getJobById(selectedAppForCert.jobId)?.department : 'Web Development',
+            fromDate: selectedAppForCert.createdAt,
+            toDate: new Date().toISOString().split('T')[0],
+            sourceType: 'Application'
+          }}
+          onSuccess={() => {}}
+        />
+      )}
     </div>
   );
 };

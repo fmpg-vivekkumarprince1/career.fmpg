@@ -729,4 +729,28 @@ export const systemService = {
   }
 };
 
+export const databaseService = {
+  getCollections: () => {
+    return api.get('/api/database/collections');
+  },
+  getDocuments: (collectionName, params = {}) => {
+    return api.get(`/api/database/collections/${encodeURIComponent(collectionName)}/documents`, { params });
+  },
+  getDocumentById: (collectionName, id) => {
+    return api.get(`/api/database/collections/${encodeURIComponent(collectionName)}/documents/${encodeURIComponent(id)}`);
+  },
+  createDocument: (collectionName, document) => {
+    return api.post(`/api/database/collections/${encodeURIComponent(collectionName)}/documents`, { document });
+  },
+  updateDocument: (collectionName, id, document, replace = false) => {
+    return api.put(`/api/database/collections/${encodeURIComponent(collectionName)}/documents/${encodeURIComponent(id)}`, { document, replace });
+  },
+  deleteDocument: (collectionName, id) => {
+    return api.delete(`/api/database/collections/${encodeURIComponent(collectionName)}/documents/${encodeURIComponent(id)}`);
+  },
+  executeQuery: (payload) => {
+    return api.post('/api/database/execute-query', payload);
+  }
+};
+
 export default api;

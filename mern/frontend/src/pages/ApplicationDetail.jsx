@@ -4,6 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { applicationService, jobService, offerLetterService, contractService } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import ApplicationOfferForm from '../components/ApplicationOfferForm';
+import QuickCertificateModal from '../components/certificates/QuickCertificateModal';
+import { Award } from 'lucide-react';
 import { formatCurrencyValue } from '../utils/currencyUtils';
 import { getResumeViewUrl } from '../utils/urlUtils';
 import Loader from '../components/common/Loader';
@@ -24,6 +26,7 @@ const ApplicationDetail = () => {
   const [jobDetailsExpanded, setJobDetailsExpanded] = useState(true);
   const [offerLetter, setOfferLetter] = useState(null);
   const [offerLetterLoading, setOfferLetterLoading] = useState(false);
+  const [showCertModal, setShowCertModal] = useState(false);
   const [contract, setContract] = useState(null);
   const [contractLoading, setContractLoading] = useState(false);
 
@@ -938,6 +941,14 @@ const ApplicationDetail = () => {
                           View in Certificates
                         </button>
                         <button 
+                          className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded transition-colors flex items-center shadow-sm"
+                          onClick={() => setShowCertModal(true)}
+                          title="Generate and send certificate directly from this application"
+                        >
+                          <Award className="w-4 h-4 mr-1.5" />
+                          Issue Certificate
+                        </button>
+                        <button 
                           className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
                           onClick={refreshOfferLetter}
                           disabled={offerLetterLoading}
@@ -986,6 +997,22 @@ const ApplicationDetail = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Direct Certificate Generator Button */}
+                {(isAdmin || (isHR && (currentUser?.permissions?.canGenerateCertificate || currentUser?.permissions?.canGenerateOfferLetter))) && (
+                  <div className="mt-4">
+                    <button 
+                      className="w-full py-2.5 px-4 text-left rounded-md transition flex items-center justify-between bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium shadow-md"
+                      onClick={() => setShowCertModal(true)}
+                    >
+                      <div className="flex items-center">
+                        <Award className="h-5 w-5 mr-2" />
+                        <span>Issue Certificate (1-Click)</span>
+                      </div>
+                      <span className="text-[11px] bg-black/25 px-2 py-0.5 rounded font-mono text-emerald-100">Ready</span>
+                    </button>
+                  </div>
+                )}
 
                 <div className="mt-6">
                   <h3 className="font-medium text-white mb-4">Reject Application</h3>
@@ -1225,6 +1252,24 @@ const ApplicationDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Quick Certificate Generator Modal */}
+      <QuickCertificateModal
+        isOpen={showCertModal}
+        onClose={() => setShowCertModal(false)}
+        sourceData={{
+          name: application?.name,
+          email: application?.email,
+          jobrole: job?.title || application?.jobTitle || offerLetter?.position || 'Intern',
+          domain: job?.department || offerLetter?.department || 'Web Development',
+          fromDate: offerLetter?.startDate || application?.createdAt,
+          toDate: offerLetter?.endDate || new Date().toISOString().split('T')[0],
+          sourceType: 'Application'
+        }}
+        onSuccess={() => {
+          toast.success('Certificate created successfully!');
+        }}
+      />
     </div>
   );
 };

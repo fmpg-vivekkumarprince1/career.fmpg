@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import ExtendOfferModal from './ExtendOfferModal';
+import QuickCertificateModal from './QuickCertificateModal';
 import ConfirmationModal from '../common/ConfirmationModal';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrencyValue } from '../../utils/currencyUtils';
+import { Award } from 'lucide-react';
 
 const OfferLetterList = ({ 
   offerLetters, 
@@ -24,6 +26,8 @@ const OfferLetterList = ({
   const [updatingStatus, setUpdatingStatus] = useState(null);
   const [extendModalOpen, setExtendModalOpen] = useState(false);
   const [selectedLetterForExtend, setSelectedLetterForExtend] = useState(null);
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [selectedLetterForCert, setSelectedLetterForCert] = useState(null);
 
   const displayedOfferLetters = filterEmail
     ? offerLetters.filter((letter) => letter.email?.toLowerCase() === filterEmail.toLowerCase())
@@ -329,6 +333,18 @@ const OfferLetterList = ({
                           {sendingEmail === letter._id ? 'Sending...' : 'Send Email'}
                         </button>
 
+                        <button
+                          onClick={() => {
+                            setSelectedLetterForCert(letter);
+                            setCertModalOpen(true);
+                          }}
+                          className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-medium rounded transition-colors flex items-center shadow-sm"
+                          title="Generate and send certificate directly from this offer letter"
+                        >
+                          <Award className="w-4 h-4 mr-1.5" />
+                          Issue Certificate
+                        </button>
+
                         {letter.status === 'Pending' && (
                           <div className="flex gap-2">
                             <button
@@ -407,6 +423,29 @@ const OfferLetterList = ({
         cancelText="Cancel"
         type="danger"
       />
+
+      {/* Quick Certificate Modal */}
+      {selectedLetterForCert && (
+        <QuickCertificateModal
+          isOpen={certModalOpen}
+          onClose={() => {
+            setCertModalOpen(false);
+            setSelectedLetterForCert(null);
+          }}
+          sourceData={{
+            name: selectedLetterForCert.name || selectedLetterForCert.candidateName,
+            email: selectedLetterForCert.email || selectedLetterForCert.candidateEmail,
+            jobrole: selectedLetterForCert.position || 'Intern',
+            domain: selectedLetterForCert.department || 'Web Development',
+            fromDate: selectedLetterForCert.startDate,
+            toDate: selectedLetterForCert.endDate || new Date().toISOString().split('T')[0],
+            sourceType: 'Offer Letter'
+          }}
+          onSuccess={() => {
+            // modal handles toast and download
+          }}
+        />
+      )}
     </div>
   );
 };

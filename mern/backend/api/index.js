@@ -17,6 +17,7 @@ const contractRoutes = require("../Routes/contractRoutes");
 const notificationRoutes = require("../Routes/notificationRoutes");
 const hrRoutes = require("../Routes/hrRoutes");
 const auditRoutes = require("../Routes/auditRoutes");
+const databaseRoutes = require("../Routes/databaseRoutes");
 const sitemapRoutes = require("../Routes/sitemapRoutes");
 const hrmsRoutes = require("../Routes/hrmsRoutes");
 
@@ -164,6 +165,7 @@ app.use("/api/contracts", contractRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/hr", hrRoutes);
 app.use("/api/audit", auditRoutes);
+app.use("/api/database", databaseRoutes);
 app.use("/api/employees", hrmsRoutes.employees);
 app.use("/api/departments", hrmsRoutes.departments);
 app.use("/api/designations", hrmsRoutes.designations);
