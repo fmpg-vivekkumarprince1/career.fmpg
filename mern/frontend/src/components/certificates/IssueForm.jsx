@@ -6,6 +6,7 @@ const getDefaultFormData = () => ({
   jobrole: '',
   fromDate: '',
   toDate: '',
+  issuedOn: new Date().toISOString().split('T')[0],
   email: '',
   issuedBy: 'FMPG'
 });
@@ -109,7 +110,7 @@ const IssueForm = ({ onSubmit, loading, initialData = {} }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-5">
             <div>
               <label htmlFor="fromDate" className="block text-sm font-medium text-slate-700 mb-1.5">
                 From Date *
@@ -136,6 +137,20 @@ const IssueForm = ({ onSubmit, loading, initialData = {} }) => {
                 onChange={handleChange}
                 required
                 className="w-full px-3.5 py-2.5 bg-white text-slate-900 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm placeholder:text-slate-400"
+              />
+            </div>
+            <div>
+              <label htmlFor="issuedOn" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Issued On (Date) *
+              </label>
+              <input
+                type="date"
+                id="issuedOn"
+                name="issuedOn"
+                value={formData.issuedOn}
+                onChange={handleChange}
+                required
+                className="w-full px-3.5 py-2.5 bg-white text-slate-900 border border-emerald-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm placeholder:text-slate-400 font-medium"
               />
             </div>
           </div>

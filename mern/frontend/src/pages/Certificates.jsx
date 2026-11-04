@@ -158,6 +158,23 @@ const Certificates = () => {
     }
   };
 
+  const handleUpdateCertificate = async (id, updatedData) => {
+    try {
+      setLoading(true);
+      await certificateService.updateCertificate(id, updatedData);
+      toast.success('Certificate updated successfully!');
+      
+      const updatedCerts = await certificateService.getAllCertificates();
+      setCertificates(updatedCerts.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update certificate');
+      console.error('Error updating certificate:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteOfferLetter = async (id) => {
     try {
       setLoading(true);
@@ -378,6 +395,7 @@ const Certificates = () => {
             loading={loading} 
             onEmailCertificate={handleEmailCertificate}
             onDeleteCertificate={handleDeleteCertificate}
+            onUpdateCertificate={handleUpdateCertificate}
           />
         )}
         

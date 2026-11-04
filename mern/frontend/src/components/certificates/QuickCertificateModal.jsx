@@ -11,6 +11,7 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
     domain: '',
     fromDate: '',
     toDate: '',
+    issuedOn: '',
     issuedBy: 'FMPG',
     subject: '',
     message: ''
@@ -46,6 +47,10 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
         to = today;
       }
 
+      const issueDate = sourceData.issuedOn
+        ? new Date(sourceData.issuedOn).toISOString().split('T')[0]
+        : today;
+
       setFormData({
         name: candidateName,
         email: candidateEmail,
@@ -53,6 +58,7 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
         domain: domainValue,
         fromDate: from,
         toDate: to,
+        issuedOn: issueDate,
         issuedBy: sourceData.issuedBy || 'FMPG',
         subject: `Certificate of Completion - ${role}`,
         message: `Dear ${candidateName || 'Candidate'},\n\nCongratulations on successfully completing your tenure with us as ${role}! Please find attached your official verified certificate of completion.\n\nBest regards,\nFMPG Team`
@@ -79,6 +85,7 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
     if (!formData.domain.trim()) return 'Domain / Department is required';
     if (!formData.fromDate) return 'Start Date (From) is required';
     if (!formData.toDate) return 'End Date (To) is required';
+    if (!formData.issuedOn) return 'Issued On Date is required';
     if (new Date(formData.fromDate) > new Date(formData.toDate)) {
       return 'Start Date cannot be after End Date';
     }
@@ -122,6 +129,7 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
         jobrole: formData.jobrole.trim(),
         fromDate: formData.fromDate,
         toDate: formData.toDate,
+        issuedOn: formData.issuedOn,
         issuedBy: formData.issuedBy.trim() || 'FMPG'
       };
 
@@ -172,6 +180,7 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
         jobrole: formData.jobrole.trim(),
         fromDate: formData.fromDate,
         toDate: formData.toDate,
+        issuedOn: formData.issuedOn,
         issuedBy: formData.issuedBy.trim() || 'FMPG'
       };
 
@@ -301,7 +310,7 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* From Date */}
             <div>
               <label className="block text-xs font-semibold text-gray-300 mb-1">
@@ -327,6 +336,20 @@ const QuickCertificateModal = ({ isOpen, onClose, sourceData = {}, onSuccess }) 
                 value={formData.toDate}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Issued On Date */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1">
+                Issued On (Date) <span className="text-emerald-400">*</span>
+              </label>
+              <input
+                type="date"
+                name="issuedOn"
+                value={formData.issuedOn}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-gray-800 border border-emerald-500/50 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
               />
             </div>
 

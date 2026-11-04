@@ -40,7 +40,26 @@ const transporter = {
 exports.issue = async (req, res) => {
     console.log("Cert: new");
     try {
-        const { name, domain, jobrole, fromDate, toDate, issuedBy, email } = req.body;
+        const {
+            name,
+            domain,
+            jobrole,
+            fromDate,
+            toDate,
+            issuedBy,
+            issuedOn,
+            email,
+            recipientAffiliation,
+            recipientId,
+            project,
+            supervisorName,
+            supervisorPosition,
+            mode,
+            performance,
+            hours,
+            summary,
+            issuePlace
+        } = req.body;
         console.log(`For: ${name}`);
 
         if (!name || !domain || !jobrole || !fromDate || !toDate) {
@@ -62,10 +81,29 @@ exports.issue = async (req, res) => {
             fromDate: new Date(fromDate),
             toDate: new Date(toDate),
             issuedBy: issuedBy || "FMPG",
+            issuedOn: issuedOn ? new Date(issuedOn) : new Date(),
+            recipientAffiliation,
+            recipientId,
+            project,
+            supervisorName,
+            supervisorPosition,
+            mode,
+            performance,
+            hours,
+            summary,
+            issuePlace
         }); const savedCertificate = await certificate.save();
         console.log(`Saved: ${savedCertificate._id}`);
 
-        try { await logAudit({ req, action: "ISSUE", resourceEntity: "Certificate", resourceId: savedCertificate._id, changes: { name, domain, jobrole } }); } catch (err) { }
+        try {
+            await logAudit({
+                req,
+                action: "ISSUE",
+                resourceEntity: "Certificate",
+                resourceId: savedCertificate._id,
+                changes: { name, domain, jobrole, issuedOn: savedCertificate.issuedOn }
+            });
+        } catch (err) { }
 
         // Don't generate PDF immediately - generate only when needed
         res.status(201).json({
@@ -552,9 +590,9 @@ async function generateCertificatePDFBuffer(certificate) {
         ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
 
-    // Issue date: when the certificate was created, or failing that the time
-    // encoded in its ObjectId.
-    const issuedOn = certificate.createdAt
+    // Issue date: prioritize explicitly set issuedOn, then createdAt, or ObjectId timestamp.
+    const issuedOn = certificate.issuedOn
+        || certificate.createdAt
         || (_id && typeof _id.getTimestamp === 'function' ? _id.getTimestamp() : null);
 
     const doc = new PDFDocument({
@@ -889,5 +927,100 @@ exports.deleteCertificate = async (req, res) => {
     } catch (error) {
         console.error("Delete certificate error:", error);
         res.status(500).json({ message: "Server error deleting certificate", error: error.message });
+    }
+};
+
+exports.updateCertificate = async (req, res) => {
+    console.log(`Update cert: ${req.params.id}`);
+    try {
+        const certId = normalizeCertificateLookupId(req.params.id);
+        const {
+            name,
+            domain,
+            jobrole,
+            fromDate,
+            toDate,
+            issuedBy,
+            issuedOn,
+            email,
+            recipientEmail,
+            recipientAffiliation,
+            recipientId,
+            project,
+            supervisorName,
+            supervisorPosition,
+            mode,
+            performance,
+            hours,
+            summary,
+            issuePlace
+        } = req.body;
+
+        const certificate = await Certificate.findById(certId);
+        if (!certificate) {
+            return res.status(404).json({ message: "Certificate not found" });
+        }
+
+        const oldValues = {
+            name: certificate.name,
+            domain: certificate.domain,
+            jobrole: certificate.jobrole,
+            fromDate: certificate.fromDate,
+            toDate: certificate.toDate,
+            issuedOn: certificate.issuedOn,
+            issuedBy: certificate.issuedBy,
+            recipientEmail: certificate.recipientEmail
+        };
+
+        if (name !== undefined) certificate.name = name;
+        if (domain !== undefined) certificate.domain = domain;
+        if (jobrole !== undefined) certificate.jobrole = jobrole;
+        if (fromDate !== undefined) certificate.fromDate = new Date(fromDate);
+        if (toDate !== undefined) certificate.toDate = new Date(toDate);
+        if (issuedBy !== undefined) certificate.issuedBy = issuedBy;
+        if (issuedOn !== undefined) certificate.issuedOn = new Date(issuedOn);
+        if (email !== undefined || recipientEmail !== undefined) {
+            certificate.recipientEmail = email || recipientEmail;
+        }
+        if (recipientAffiliation !== undefined) certificate.recipientAffiliation = recipientAffiliation;
+        if (recipientId !== undefined) certificate.recipientId = recipientId;
+        if (project !== undefined) certificate.project = project;
+        if (supervisorName !== undefined) certificate.supervisorName = supervisorName;
+        if (supervisorPosition !== undefined) certificate.supervisorPosition = supervisorPosition;
+        if (mode !== undefined) certificate.mode = mode;
+        if (performance !== undefined) certificate.performance = performance;
+        if (hours !== undefined) certificate.hours = hours;
+        if (summary !== undefined) certificate.summary = summary;
+        if (issuePlace !== undefined) certificate.issuePlace = issuePlace;
+
+        const updatedCertificate = await certificate.save();
+
+        try {
+            await logAudit({
+                req,
+                action: "UPDATE",
+                resourceEntity: "Certificate",
+                resourceId: certificate._id,
+                changes: {
+                    old: oldValues,
+                    new: {
+                        name: certificate.name,
+                        domain: certificate.domain,
+                        jobrole: certificate.jobrole,
+                        fromDate: certificate.fromDate,
+                        toDate: certificate.toDate,
+                        issuedOn: certificate.issuedOn
+                    }
+                }
+            });
+        } catch (err) { }
+
+        res.status(200).json({
+            message: "Certificate updated successfully",
+            certificate: updatedCertificate
+        });
+    } catch (error) {
+        console.error("Error updating certificate:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 };

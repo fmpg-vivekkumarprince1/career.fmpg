@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Loader from '../common/Loader';
 import ConfirmationModal from '../common/ConfirmationModal';
 
-const CertificateList = ({ certificates, loading, onEmailCertificate, onDeleteCertificate }) => {
+const CertificateList = ({ certificates, loading, onEmailCertificate, onDeleteCertificate, onUpdateCertificate }) => {
   const { isSuperAdmin } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [certToDelete, setCertToDelete] = useState(null);
@@ -18,6 +18,65 @@ const CertificateList = ({ certificates, loading, onEmailCertificate, onDeleteCe
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifiedCertificate, setVerifiedCertificate] = useState(null);
   const [verifyError, setVerifyError] = useState('');
+
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCert, setEditingCert] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    domain: '',
+    jobrole: '',
+    fromDate: '',
+    toDate: '',
+    issuedOn: '',
+    issuedBy: 'FMPG',
+    recipientEmail: ''
+  });
+  const [editLoading, setEditLoading] = useState(false);
+
+  const handleShowEditModal = (cert) => {
+    setEditingCert(cert);
+    setEditFormData({
+      name: cert.name || '',
+      domain: cert.domain || '',
+      jobrole: cert.jobrole || '',
+      fromDate: cert.fromDate ? new Date(cert.fromDate).toISOString().split('T')[0] : '',
+      toDate: cert.toDate ? new Date(cert.toDate).toISOString().split('T')[0] : '',
+      issuedOn: cert.issuedOn ? new Date(cert.issuedOn).toISOString().split('T')[0] : (cert.createdAt ? new Date(cert.createdAt).toISOString().split('T')[0] : ''),
+      issuedBy: cert.issuedBy || 'FMPG',
+      recipientEmail: cert.recipientEmail || cert.userId?.email || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingCert(null);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingCert) return;
+    setEditLoading(true);
+    try {
+      if (onUpdateCertificate) {
+        await onUpdateCertificate(editingCert._id, editFormData);
+      } else {
+        await certificateService.updateCertificate(editingCert._id, editFormData);
+      }
+      setShowEditModal(false);
+      setEditingCert(null);
+    } catch (err) {
+      console.error('Failed to update certificate:', err);
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   const handleCloseEmailModal = () => setShowEmailModal(false);
 
@@ -157,6 +216,13 @@ const CertificateList = ({ certificates, loading, onEmailCertificate, onDeleteCe
                             disabled={downloadLoading && activeDownloadId === cert._id}
                           >
                             {downloadLoading && activeDownloadId === cert._id ? 'Downloading...' : 'Download'}
+                          </button>
+                          <button
+                            className="px-3 py-1 bg-transparent border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:bg-amber-900/30 text-xs font-medium rounded transition-colors"
+                            onClick={() => handleShowEditModal(cert)}
+                            title="Edit Certificate & Issued On Date"
+                          >
+                            Edit
                           </button>
                           <button
                             className="px-3 py-1 bg-transparent border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white text-xs font-medium rounded transition-colors"
@@ -326,6 +392,143 @@ const CertificateList = ({ certificates, loading, onEmailCertificate, onDeleteCe
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Certificate Modal */}
+      {showEditModal && editingCert && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl max-w-xl w-full p-6 text-white">
+            <div className="flex justify-between items-center border-b border-gray-800 pb-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">Edit Certificate & Issued Date</h3>
+                <p className="text-xs text-gray-400 font-mono">ID: FMPG-{editingCert._id}</p>
+              </div>
+              <button
+                onClick={handleCloseEditModal}
+                className="text-gray-400 hover:text-white p-1 rounded-lg"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Recipient Name *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={editFormData.name}
+                    onChange={handleEditChange}
+                    required
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Recipient Email</label>
+                  <input
+                    type="email"
+                    name="recipientEmail"
+                    value={editFormData.recipientEmail}
+                    onChange={handleEditChange}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Job Role *</label>
+                  <input
+                    type="text"
+                    name="jobrole"
+                    value={editFormData.jobrole}
+                    onChange={handleEditChange}
+                    required
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Domain *</label>
+                  <input
+                    type="text"
+                    name="domain"
+                    value={editFormData.domain}
+                    onChange={handleEditChange}
+                    required
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">From Date *</label>
+                  <input
+                    type="date"
+                    name="fromDate"
+                    value={editFormData.fromDate}
+                    onChange={handleEditChange}
+                    required
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">To Date *</label>
+                  <input
+                    type="date"
+                    name="toDate"
+                    value={editFormData.toDate}
+                    onChange={handleEditChange}
+                    required
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-emerald-300 mb-1">Issued On Date *</label>
+                  <input
+                    type="date"
+                    name="issuedOn"
+                    value={editFormData.issuedOn}
+                    onChange={handleEditChange}
+                    required
+                    className="w-full px-3 py-2 bg-gray-800 border border-emerald-500/70 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Issued By</label>
+                <input
+                  type="text"
+                  name="issuedBy"
+                  value={editFormData.issuedBy}
+                  onChange={handleEditChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-800">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50"
+                >
+                  {editLoading ? 'Saving Changes...' : 'Save & Update Certificate'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

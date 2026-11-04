@@ -10,6 +10,7 @@ router.get("/verify/:id", CertificationController.verifyCertificate);
 router.get("/", auth, isHR, CertificationController.getAllCertificates);
 router.get("/download/:id", CertificationController.downloadCertificate);
 router.post("/:id/send-email", auth, hasPermission('canGenerateCertificate'), CertificationController.sendCertificateEmail);
+router.put("/:id", auth, hasPermission('canGenerateCertificate'), CertificationController.updateCertificate);
 router.delete("/:id", auth, verifySuperAdmin, CertificationController.deleteCertificate);
 
 const multer = require("multer");
