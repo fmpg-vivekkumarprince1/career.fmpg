@@ -24,4 +24,4 @@ const certificateSchema = new mongoose.Schema({
   issuePlace: { type: String, trim: true }            // place of issue, printed after the issue date
 });
 
-module.exports = mongoose.model("Certificate", certificateSchema);
+module.exports = mongoose.models.Certificate || mongoose.model("Certificate", certificateSchema);
